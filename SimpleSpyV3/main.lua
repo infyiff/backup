@@ -9,8 +9,30 @@ local configs = {
     logcheckcaller = false,
     autoblock = false,
     funcEnabled = true,
-    logmetamethod = false
+    logmetamethod = false,
+    supersecretdevtoggle = false
 }
+
+local game = game
+local workspace = workspace
+local table = table
+local math = math
+local task = task
+local coroutine = coroutine
+local string = string
+local Color3 = Color3
+local Instance = Instance
+local lower = string.lower
+local round = math.round
+local wrap = coroutine.wrap
+local running = coroutine.running
+local resume = coroutine.resume
+local status = coroutine.status
+local yield = coroutine.yield
+local create = coroutine.create
+local tostring = tostring
+local tonumber = tonumber
+local delay = task.delay
 
 local function Create(instance, properties, children)
     local obj = Instance.new(instance)
@@ -24,33 +46,57 @@ local function Create(instance, properties, children)
     return obj;
 end
 
-local game = game
-local workspace = workspace
-local table = table
-local math = math
-local task = task
-local coroutine = coroutine
-local string = string
-local lower = string.lower
-local round = math.round
-local wrap = coroutine.wrap
-local CurrentCamera = workspace.CurrentCamera
-local tostring = tostring
-local tonumber = tonumber
-local delay = task.delay
+local function SafeInstance(instace)
+    if cloneref then
+        return cloneref(instace)
+    end
+    return instace
+end
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local ContentProvider = game:GetService("ContentProvider")
-local TextService = game:GetService("TextService")
-local http = game:GetService("HttpService")
+local function SafeGetService(service)
+    if cloneref then
+        return cloneref(game:GetService(service))
+    end
+    return game:GetService(service)
+end
+
+local CoreGui = SafeGetService("CoreGui")
+local Players = SafeGetService("Players")
+local RunService = SafeGetService("RunService")
+local UserInputService = SafeGetService("UserInputService")
+local TweenService = SafeGetService("TweenService")
+local ContentProvider = SafeGetService("ContentProvider")
+local TextService = SafeGetService("TextService")
+local http = SafeGetService("HttpService")
+
+local function ErrorPrompt(Message,state)
+    if getrenv then
+        local ErrorPrompt = getrenv().require(CoreGui:WaitForChild("RobloxGui"):WaitForChild("Modules"):WaitForChild("ErrorPrompt")) -- File can be located in your roblox folder (C:\Users\%Username%\AppData\Local\Roblox\Versions\whateverversionitis\ExtraContent\scripts\CoreScripts\Modules)
+        local prompt = ErrorPrompt.new("Default",{HideErrorCode = true})
+        local ErrorStoarge = Create("ScreenGui",{Parent = CoreGui,ResetOnSpawn = false})
+        prompt:setParent(ErrorStoarge)
+        prompt:setErrorTitle("Simple Spy V3 Error")
+        prompt:updateButtons({{
+            Text = "Proceed",
+            Callback = function(...)
+                prompt:_close()
+                ErrorStoarge:Destroy()
+                state = false
+            end,
+            Primary = true
+        }}, 'Default')
+        prompt:_open(Message)
+        if state then
+            repeat task.wait() until not state
+        end
+    else
+        warn(Message)
+    end
+end
 
 local getcustomasset = getsynasset or getcustomasset
 
 local Highlight = loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/highlight.lua"))()
-
 ---- GENERATED (kinda sorta mostly) BY GUI to LUA ----
 
 -- Instances:
@@ -119,7 +165,7 @@ Simple.BackgroundTransparency = 1
 Simple.Position = UDim2.new(0, 5, 0, 0)
 Simple.Size = UDim2.new(0, 57, 0, 18)
 Simple.Font = Enum.Font.SourceSansBold
-Simple.Text = "SimpleSpy"
+Simple.Text =  "SimpleSpy"
 Simple.TextColor3 = Color3.new(1, 1, 1)
 Simple.TextSize = 14
 Simple.TextXAlignment = Enum.TextXAlignment.Left
@@ -233,7 +279,6 @@ local getNil = false
 local connectedRemotes = {}
 --- True = hookfunction, false = namecall
 local toggle = false
-local originalnamecall
 --- used to prevent recursives
 local prevTables = {}
 --- holds logs (for deletion)
@@ -257,9 +302,6 @@ local getnilrequired = false
 local history = {}
 local excluding = {}
 
--- remote hooking/connecting api variables
-local remoteSignals = {}
-
 -- if mouse inside gui
 local mouseInGui = false
 
@@ -270,6 +312,7 @@ local function jsond(str) return http:JSONDecode(str) end
 local connections = {}
 local DecompiledScripts = {}
 local writefiletoggle = false
+local originalnamecall
 
 local remoteEvent = Instance.new("RemoteEvent",Storage)
 local remoteFunction = Instance.new("RemoteFunction",Storage)
@@ -279,6 +322,11 @@ local originalFunction = remoteFunction.InvokeServer
 local methodtypes = {
     ["fireserver"] = true,
     ["invokeserver"] = true
+}
+
+local instancetypes = {
+    ["RemoteEvent"] = "FireServer",
+    ["RemoteFunction"] = "InvokeServer"
 }
 
 local getinfolevel = 3
@@ -354,16 +402,6 @@ function SimpleSpy:ValueToString(value)
     return v2s(value)
 end
 
---- Gets the ScriptSignal for a specified remote being fired
---- @param remote Instance
-function SimpleSpy:GetRemoteFiredSignal(remote)
-    assert(typeof(remote) == "Instance", "Instance expected, got " .. typeof(remote))
-    if not remoteSignals[remote] then
-        remoteSignals[remote] = newSignal()
-    end
-    return remoteSignals[remote]
-end
-
 --- Blocks the specified remote instance/string
 --- @param remote any
 function SimpleSpy:BlockRemote(remote)
@@ -405,15 +443,15 @@ function newSignal()
             })
         end,
         Wait = function(self)
-            local thread = coroutine.running()
+            local thread = running()
             local connection
             connection = self:Connect(function()
                 connection:Disconnect()
-                if coroutine.status(thread) == "suspended" then
-                    coroutine.resume(thread)
+                if status(thread) == "suspended" then
+                    resume(thread)
                 end
             end)
-            coroutine.yield()
+            yield()
         end,
         Fire = function(self, ...)
             for _, f in next, connected do
@@ -490,15 +528,13 @@ end
 
 --- Reconnects bringBackOnResize if the current viewport changes and also connects it initially
 function connectResize()
-    local lastCam = CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(bringBackOnResize)
+    local lastCam = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(bringBackOnResize)
     workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
         lastCam:Disconnect()
-        if CurrentCamera then
-            if typelastCam == 'Connection' then
-                lastCam:Disconnect()
-            end
-            lastCam = CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(bringBackOnResize)
+        if typeof(lastCam) == 'Connection' then
+            lastCam:Disconnect()
         end
+        lastCam = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(bringBackOnResize)
     end)
 end
 
@@ -512,7 +548,7 @@ function bringBackOnResize()
     end
     local currentX = Background.AbsolutePosition.X
     local currentY = Background.AbsolutePosition.Y
-    local viewportSize = CurrentCamera.ViewportSize
+    local viewportSize = workspace.CurrentCamera.ViewportSize
     if (currentX < 0) or (currentX > (viewportSize.X - (sideClosed and 131 or Background.AbsoluteSize.X))) then
         if currentX < 0 then
             currentX = 0
@@ -538,37 +574,42 @@ function onBarInput(input)
         local mainPos = Background.AbsolutePosition
         local offset = mainPos - lastPos
         local currentPos = offset + lastPos
-        connections["drag"] = RunService.RenderStepped:Connect(function()
-            local newPos = UserInputService.GetMouseLocation(UserInputService)
-            if newPos ~= lastPos then
-                local currentX = (offset + newPos).X
-                local currentY = (offset + newPos).Y
-                local viewportSize = CurrentCamera.ViewportSize
-                if (currentX < 0 and currentX < currentPos.X) or (currentX > (viewportSize.X - (sideClosed and 131 or TopBar.AbsoluteSize.X)) and currentX > currentPos.X) then
-                    if currentX < 0 then
-                        currentX = 0
-                    else
-                        currentX = viewportSize.X - (sideClosed and 131 or TopBar.AbsoluteSize.X)
+        if not connections["drag"] then
+            connections["drag"] = RunService.RenderStepped:Connect(function()
+                local newPos = UserInputService.GetMouseLocation(UserInputService)
+                if newPos ~= lastPos then
+                    local currentX = (offset + newPos).X
+                    local currentY = (offset + newPos).Y
+                    local viewportSize = workspace.CurrentCamera.ViewportSize
+                    if (currentX < 0 and currentX < currentPos.X) or (currentX > (viewportSize.X - (sideClosed and 131 or TopBar.AbsoluteSize.X)) and currentX > currentPos.X) then
+                        if currentX < 0 then
+                            currentX = 0
+                        else
+                            currentX = viewportSize.X - (sideClosed and 131 or TopBar.AbsoluteSize.X)
+                        end
                     end
-                end
-                if (currentY < 0 and currentY < currentPos.Y) or (currentY > (viewportSize.Y - (closed and 19 or Background.AbsoluteSize.Y) - 36) and currentY > currentPos.Y) then
-                    if currentY < 0 then
-                        currentY = 0
-                    else
-                        currentY = viewportSize.Y - (closed and 19 or Background.AbsoluteSize.Y) - 36
+                    if (currentY < 0 and currentY < currentPos.Y) or (currentY > (viewportSize.Y - (closed and 19 or Background.AbsoluteSize.Y) - 36) and currentY > currentPos.Y) then
+                        if currentY < 0 then
+                            currentY = 0
+                        else
+                            currentY = viewportSize.Y - (closed and 19 or Background.AbsoluteSize.Y) - 36
+                        end
                     end
+                    currentPos = Vector2.new(currentX, currentY)
+                    lastPos = newPos
+                    TweenService.Create(TweenService, Background, TweenInfo.new(0.1), {Position = UDim2.new(0, currentPos.X, 0, currentPos.Y)}):Play()
                 end
-                currentPos = Vector2.new(currentX, currentY)
-                lastPos = newPos
-                TweenService.Create(TweenService, Background, TweenInfo.new(0.1), {Position = UDim2.new(0, currentPos.X, 0, currentPos.Y)}):Play()
-            end
-                -- if input.UserInputState ~= Enum.UserInputState.Begin then
-                --     RunService.UnbindFromRenderStep(RunService, "drag")
-                -- end
-        end)
+                    -- if input.UserInputState ~= Enum.UserInputState.Begin then
+                    --     RunService.UnbindFromRenderStep(RunService, "drag")
+                    -- end
+            end)
+        end
         table.insert(connections, UserInputService.InputEnded:Connect(function(inputE)
             if input == inputE then
-                connections["drag"]:Disconnect()
+                if connections["drag"] then
+                    connections["drag"]:Disconnect()
+                    connections["drag"] = nil
+                end
             end
         end))
     end
@@ -812,7 +853,7 @@ end
 --- Ensures size is within screensize limitations
 function validateSize()
     local x, y = Background.AbsoluteSize.X, Background.AbsoluteSize.Y
-    local screenSize = CurrentCamera.ViewportSize
+    local screenSize = workspace.CurrentCamera.ViewportSize
     if x + Background.AbsolutePosition.X > screenSize.X then
         if screenSize.X - Background.AbsolutePosition.X >= 450 then
             x = screenSize.X - Background.AbsolutePosition.X
@@ -882,9 +923,11 @@ end
 --- Runs on MouseButton1Click of an event frame
 function eventSelect(frame)
     if selected and selected.Log  then
-        task.spawn(function()
-            TweenService:Create(selected.Log.Button, TweenInfo.new(0.5), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
-        end)
+        if selected.Button then
+            task.spawn(function()
+                TweenService:Create(selected.Button, TweenInfo.new(0.5), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+            end)
+        end
         selected = nil
     end
     for _, v in next, logs do
@@ -926,7 +969,7 @@ function makeToolTip(enable, text)
         connections["ToolTip"] = RunService.RenderStepped:Connect(function()
             local topLeft = Vector2.new(Mouse.X + 20, Mouse.Y + 20)
             local bottomRight = topLeft + ToolTip.AbsoluteSize
-            local ViewportSize = CurrentCamera.ViewportSize
+            local ViewportSize = workspace.CurrentCamera.ViewportSize
             local ViewportSizeX = ViewportSize.X
             local ViewportSizeY = ViewportSize.Y
 
@@ -995,40 +1038,41 @@ end
 --- @param function_info string
 --- @param blocked any
 function newRemote(type, name, args, remote, function_info, blocked, src)
-    local RemoteTemplate = Create("Frame",{Name = "RemoteTemplate",Parent = LogList,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Size = UDim2.new(0, 117, 0, 27)})
+    if layoutOrderNum < 1 then
+        layoutOrderNum = 999999999
+    end
+    local RemoteTemplate = Create("Frame",{LayoutOrder = layoutOrderNum,Name = "RemoteTemplate",Parent = LogList,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Size = UDim2.new(0, 117, 0, 27)})
     local ColorBar = Create("Frame",{Name = "ColorBar",Parent = RemoteTemplate,BackgroundColor3 = (type == "event" and Color3.fromRGB(255, 242, 0)) or Color3.fromRGB(99, 86, 245),BorderSizePixel = 0,Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 7, 0, 18),ZIndex = 2})
     local Text = Create("TextLabel",{TextTruncate = Enum.TextTruncate.AtEnd,Name = "Text",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Position = UDim2.new(0, 12, 0, 1),Size = UDim2.new(0, 105, 0, 18),ZIndex = 2,Font = Enum.Font.SourceSans,Text = name,TextColor3 = Color3.new(1, 1, 1),TextSize = 14,TextXAlignment = Enum.TextXAlignment.Left})
     local Button = Create("TextButton",{Name = "Button",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(0, 0, 0),BackgroundTransparency = 0.75,BorderColor3 = Color3.new(1, 1, 1),Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 117, 0, 18),AutoButtonColor = false,Font = Enum.Font.SourceSans,Text = "",TextColor3 = Color3.new(0, 0, 0),TextSize = 14})
 
-    local id = Create("IntValue",{Name = "ID",Value = #logs + 1,Parent = RemoteTemplate})
+    --local id = Create("IntValue",{Name = "ID",Value = #logs + 1,Parent = RemoteTemplate})
     local log = {
         Name = name,
         Function = function_info,
         Remote = remote,
+        args = args,
         Log = RemoteTemplate,
+        Button = Button,
         Blocked = blocked,
         Source = src,
-        GenScript = "-- Generating, please wait... (click to reload)\n-- (If this message persists, the remote args are likely extremely long)"
+        GenScript = "-- Generating, please wait...\n-- (If this message persists, the remote args are likely extremely long)"
     }
     if src and not DecompiledScripts[src] then
         DecompiledScripts[src] = nil
     end
     logs[#logs + 1] = log
-    schedule(function()
-        log.GenScript = genScript(remote, args)
-        if blocked then
-            logs[#logs].GenScript = "-- THIS REMOTE WAS PREVENTED FROM FIRING THE SERVER BY SIMPLESPY\n\n" .. logs[#logs].GenScript
-        end
-    end)
     local connect = Button.MouseButton1Click:Connect(function()
         eventSelect(RemoteTemplate)
+        log.GenScript = genScript(remote, args)
+        if blocked then
+            logs[#logs].GenScript = "-- THIS REMOTE WAS PREVENTED FROM FIRING TO THE SERVER BY SIMPLESPY\n\n" .. logs[#logs].GenScript
+        end
+        if selected == log and RemoteTemplate then
+            eventSelect(RemoteTemplate)
+        end
     end)
-    if layoutOrderNum < 1 then
-        layoutOrderNum = 999999999
-    end
-    RemoteTemplate.LayoutOrder = layoutOrderNum
-    layoutOrderNum = layoutOrderNum - 1
-    RemoteTemplate.Parent = LogList
+    layoutOrderNum -= 1
     table.insert(remoteLogs, 1, {connect, RemoteTemplate})
     clean()
     updateRemoteCanvas()
@@ -1047,7 +1091,7 @@ function genScript(remote, args)
             if
                 not pcall(
                     function()
-                        for i, v in pairs(args) do
+                        for i, v in next, args do
                             if type(i) ~= "Instance" and type(i) ~= "userdata" then
                                 gen = gen .. "\n    [object] = "
                             elseif type(i) == "string" then
@@ -1075,7 +1119,7 @@ function genScript(remote, args)
             end
         end
         if not remote:IsDescendantOf(game) and not getnilrequired then
-            gen = "function getNil(name,class) for _,v in pairs(getnilinstances())do if v.ClassName==class and v.Name==name then return v;end end end\n\n" .. gen
+            gen = "function getNil(name,class) for _,v in next, getnilinstances()do if v.ClassName==class and v.Name==name then return v;end end end\n\n" .. gen
         end
         if remote:IsA("RemoteEvent") then
             gen = gen .. v2s(remote) .. ":FireServer(unpack(args))"
@@ -1198,6 +1242,9 @@ local ufunctions = {
     end,
     Color3 = function(u)
         return ("Color3.fromRGB(%s, %s, %s)"):format(tostring(round(u.r*255)),tostring(round(u.g*255)),tostring(round(u.b*255)))
+    end,
+    Random = function(u)
+        return "Random.new()"
     end
 }
 
@@ -1225,7 +1272,7 @@ local typeofv2sfunctions = {
         return t2s(v, l, p, n, vtv, i, pt, path, tables, tI)
     end,
     Instance = function(v)
-        return i2p(v)
+        return i2p(SafeInstance(v),v == Players.LocalPlayer)
     end,
     userdata = function(v)
         return "newproxy(true)"
@@ -1380,8 +1427,11 @@ function f2s(f)
     end
     if configs.funcEnabled then
         local funcinfo = getinfo(f)
-        if funcinfo and funcinfo.name and funcinfo.name:match("^[%a_]+[%w_]*$") then
-            return ("function() %s end"):format(funcinfo.name)
+        if funcinfo then
+            local funcinfoname = funcinfo.name
+            if funcinfoname and funcinfoname:match("^[%a_]+[%w_]*$") then
+                return ("function() %s end"):format(funcinfoname)
+            end
         end
     end
     return ("function() %s end"):format(tostring(f))
@@ -1389,7 +1439,7 @@ end
 
 --- instance-to-path
 --- @param i userdata
-function i2p(i)
+function i2p(i,check)
     local player = getplayer(i)
     local parent = i
     local out = ""
@@ -1415,7 +1465,7 @@ function i2p(i)
     elseif parent ~= game then
         while true do
             if parent and parent.Parent == game then
-                if game:GetService(parent.ClassName) then
+                if SafeGetService(parent.ClassName) then
                     if lower(parent.ClassName) == "workspace" then
                         return "workspace" .. out
                     else
@@ -1428,16 +1478,16 @@ function i2p(i)
                         return 'game:FindFirstChild(' .. formatstr(parent.Name) .. ')' .. out
                     end
                 end
-            elseif parent.Parent == nil then
+            elseif not parent.Parent then
                 getnilrequired = true
                 return 'getNil(' .. formatstr(parent.Name) .. ', "' .. parent.ClassName .. '")' .. out
-            elseif parent == Players.LocalPlayer then
+            elseif check then
                 out = ".LocalPlayer" .. out
             else
                 if parent.Name:match("[%a_]+[%w_]*") ~= parent.Name then
-                    out = ':FindFirstChild(' .. formatstr(parent.Name) .. ')' .. out
+                    out = ':WaitForChild(' .. formatstr(parent.Name) .. ')' .. out
                 else
-                    out = "." .. parent.Name .. out
+                    out = ':WaitForChild("' .. parent.Name .. '")'..out
                 end
             end
             parent = parent.Parent
@@ -1512,7 +1562,7 @@ end
 
 local function isFinished(tableinquestion)
     for _, v in next, tableinquestion do
-        if coroutine.status(v) == "running" then
+        if status(v) == "running" then
             return false
         end
     end
@@ -1530,26 +1580,26 @@ function handlespecials(s, indentation)
         i = i + 1
         local char = s:sub(i, i)
         if string.byte(char) then
-            local c = coroutine.create(coroutineFunc)
+            local c = create(coroutineFunc)
             table.insert(coroutines, c)
             if char == "\n" then
-                coroutine.resume(c, i, "\\n")
+                resume(c, i, "\\n")
                 -- s = s:sub(0, i - 1) .. "\\n" .. s:sub(i + 1, -1)
                 i = i + 1
             elseif char == "\t" then
-                coroutine.resume(c, i, "\\t")
+                resume(c, i, "\\t")
                 -- s = s:sub(0, i - 1) .. "\\t" .. s:sub(i + 1, -1)
                 i = i + 1
             elseif char == "\\" then
-                coroutine.resume(c, i, "\\\\")
+                resume(c, i, "\\\\")
                 -- s = s:sub(0, i - 1) .. "\\\\" .. s:sub(i + 1, -1)
                 i = i + 1
             elseif char == '"' then
-                coroutine.resume(c, i, "\\\"")
+                resume(c, i, "\\\"")
                 -- s = s:sub(0, i - 1) .. '\\"' .. s:sub(i + 1, -1)
                 i = i + 1
             elseif string.byte(char) > 126 or string.byte(char) < 32 then
-                coroutine.resume(c, i, "\\" .. string.byte(char))
+                resume(c, i, "\\" .. string.byte(char))
                 -- s = s:sub(0, i - 1) .. "\\" .. string.byte(char) .. s:sub(i + 1, -1)
                 i = i + #tostring(string.byte(char))
             end
@@ -1631,11 +1681,11 @@ end
 
 --- yields the current thread until the scheduler gives the ok
 function scheduleWait()
-    local thread = coroutine.running()
+    local thread = running()
     schedule(function()
-        coroutine.resume(thread)
+        resume(thread)
     end)
-    coroutine.yield()
+    yield()
 end
 
 --- the big (well tbh small now) boi task scheduler himself, handles p much anything as quicc as possible
@@ -1644,7 +1694,7 @@ function taskscheduler()
         scheduled = {}
         return
     end
-    if #scheduled > 1000 then
+    if #scheduled > SIMPLESPYCONFIG_MaxRemotes + 100 then
         table.remove(scheduled, #scheduled)
     end
     if #scheduled > 0 then
@@ -1662,11 +1712,6 @@ function remoteHandler(hookfunction, methodName, remote, args, func, calling,met
         if configs.funcEnabled and not calling then
             _, calling = pcall(getScriptFromSrc, getinfo(func).source)
         end
-        wrap(function()
-            if remoteSignals[remote] then
-                remoteSignals[remote]:Fire(args)
-            end
-        end)()
         if configs.autoblock then
             if excluding[remote] then
                 return
@@ -1692,7 +1737,7 @@ function remoteHandler(hookfunction, methodName, remote, args, func, calling,met
             functionInfoStr = {
                 info = getinfo(func),
                 constants = getconstants(func),
-                upvalues = getupvalues(func)
+                upvalues = setmetatable(getupvalues(func), {__mode="kv"}) --Thank you GameGuy#5286
             }
 
             if configs.logmetamethod then
@@ -1824,6 +1869,9 @@ if not getgenv().SimpleSpyExecuted then
         ContentProvider:PreloadAsync({"rbxassetid://6065821980", "rbxassetid://6065774948", "rbxassetid://6065821086", "rbxassetid://6065821596", ImageLabel, ImageLabel_2, ImageLabel_3})
         -- if gethui then configs.funcEnabled = false end
         onToggleButtonClick()
+        if not hookmetamethod then
+            ErrorPrompt("Simple Spy v3 will not function to it's fullest capablity due to your executor not supporting hookmetamethod.",true)
+        end
         codebox = Highlight.new(CodeBox)
         wrap(function()
             local suc,err = pcall(game.HttpGet,game,"https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/update.txt")
@@ -1855,13 +1903,15 @@ if not getgenv().SimpleSpyExecuted then
         end)()
         schedulerconnect = RunService.Heartbeat:Connect(taskscheduler)
         bringBackOnResize()
-        SimpleSpy3.Parent = (gethui and gethui()) or (syn and syn.protect_gui and syn.protect_gui(SimpleSpy3)) or game:FindService("CoreGui")
-        if not Players.LocalPlayer then
-            Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
-        end
-        Mouse = Players.LocalPlayer:GetMouse()
-        oldIcon = Mouse.Icon
-        table.insert(connections, Mouse.Move:Connect(mouseMoved))
+        SimpleSpy3.Parent = (gethui and gethui()) or (syn and syn.protect_gui and syn.protect_gui(SimpleSpy3)) or CoreGui
+        wrap(function()
+            if not Players.LocalPlayer then
+                Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+            end
+            Mouse = Players.LocalPlayer:GetMouse()
+            oldIcon = Mouse.Icon
+            table.insert(connections, Mouse.Move:Connect(mouseMoved))
+        end)()
     end)
     if succeeded then
         getgenv().SimpleSpyExecuted = true
@@ -1874,8 +1924,8 @@ if not getgenv().SimpleSpyExecuted then
             hookfunction(remoteEvent.FireServer, originalEvent)
             hookfunction(remoteFunction.InvokeServer, originalFunction)
         end
-        warn("An erorr has occured\n" .. tostring(err))
         SimpleSpy3:Destroy()
+        ErrorPrompt("An error has occured:\n"..tostring(err))
         return
     end
 else
@@ -1924,7 +1974,7 @@ newButton(
     "Copy Remote",
     function() return "Click to copy the path of the remote" end,
     function()
-        if selected then
+        if selected and selected.Remote then
             setclipboard(v2s(selected.Remote))
             TextLabel.Text = "Copied!"
         end
@@ -1936,14 +1986,20 @@ newButton(
     "Run Code",
     function() return "Click to execute code" end,
     function()
-        local orText = "Click to execute code"
-        TextLabel.Text = "Executing..."
-        local succeeded,Error = pcall(function() return loadstring(codebox:getString())() end)
-        if succeeded then
-            TextLabel.Text = "Executed successfully!"
-        else
-            TextLabel.Text = ("Execution error!\n[[%s]]"):format(Error)
+        if selected and selected.Remote and selected.args then
+            local Remote = selected.Remote
+            local args = selected.args
+
+            TextLabel.Text = "Executing..."
+            local succeeded,returnvalue = pcall(function() return Remote[instancetypes[Remote.ClassName]](Remote,unpack(args)) end)
+            if succeeded then
+                TextLabel.Text = ("Executed successfully!\n%s"):format(v2s(returnvalue))
+            else
+                TextLabel.Text = ("Execution error!\n%s"):format(returnvalue)
+            end
+            return
         end
+        TextLabel.Text = "Source not found"
     end
 )
 
@@ -1966,9 +2022,9 @@ newButton(
     function()
         if selected then
             if selected.Function then
-                codebox:setRaw("--[[Generating Function Info please wait]]")
-                RunService.Heartbeat:Wait()
                 if typeof(selected.Function) ~= 'string' then
+                    codebox:setRaw("--[[Generating Function Info please wait]]")
+                    RunService.Heartbeat:Wait()
                     selected.Function = tostring(v2v({functionInfo = selected.Function}))
                 end
                 codebox:setRaw("-- Calling function info\n-- Generated by the SimpleSpy serializer\n\n"..selected.Function)
@@ -2075,16 +2131,15 @@ newButton("Decompile",
                     DecompiledScripts[Source] = decompile(Source):gsub("-- Decompiled with the Synapse X Luau decompiler.","")
                 end)
                 if suc then
-                    if lower(DecompiledScripts[Source]):find("script") and v2s(Source) then
-                        DecompiledScripts[Source] = ("local script = %s\n%s"):format(v2s(Source),DecompiledScripts[Source])
+                    local Sourcev2s = v2s(Source)
+                    if lower(DecompiledScripts[Source]):find("script") and Sourcev2s then
+                        DecompiledScripts[Source] = ("local script = %s\n%s"):format(Sourcev2s,DecompiledScripts[Source])
                     end
-                    codebox:setRaw(DecompiledScripts[Source])
                 else
-                    codebox:setRaw(("--[[\nAn error has occured\n%s\n]]"):format(err))
+                    return codebox:setRaw(("--[[\nAn error has occured\n%s\n]]"):format(err))
                 end
-            else
-                codebox:setRaw(DecompiledScripts[Source])
             end
+            codebox:setRaw(DecompiledScripts[Source])
             TextLabel.Text = "Done!"
         else
             TextLabel.Text = "Source not found!"
@@ -2126,3 +2181,41 @@ function()
     configs.logmetamethod = not configs.logmetamethod
     TextLabel.Text = ("[%s] Display remote's metamethod in Function Info"):format(configs.logmetamethod and "ENABLED" or "DISABLED")
 end)
+
+if syn and syn.request then request = syn.request end
+newButton("Join Discord",function()
+    return "Joins The Simple Spy Discord"
+end,
+function()
+    setclipboard("https://discord.com/invite/AWS6ez9")
+    TextLabel.Text = "Copied invite to your clipboard"
+    if request then
+        request({Url = 'http://127.0.0.1:6463/rpc?v=1',Method = 'POST',Headers = {['Content-Type'] = 'application/json', Origin = 'https://discord.com'},Body = http:JSONEncode({cmd = 'INVITE_BROWSER',nonce = http:GenerateGUID(false),args = {code = 'AWS6ez9'}})})
+    end
+end)
+
+if configs.supersecretdevtoggle then
+    newButton("Load SSV2.2",function()
+        return "Load's Simple Spy V2.2"
+    end,
+    function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/exxtremestuffs/SimpleSpySource/master/SimpleSpy.lua"))()
+    end)
+    newButton("Load SSV3",function()
+        return "Load's Simple Spy V3"
+    end,
+    function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/main.lua"))()
+    end)
+    local SuperSecretFolder = Create("Folder",{Parent = SimpleSpy3})
+    newButton("SUPER SECRET BUTTON",function()
+        return "You dont need a discription you already know what it does"
+    end,
+    function()
+        SuperSecretFolder:ClearAllChildren()
+        local random = listfiles("Music")
+        local NotSound = Create("Sound",{Parent = SuperSecretFolder,Looped = false,Volume = math.random(1,5),SoundId = getsynasset(random[math.random(1,#random)])})
+        NotSound:Play()
+    end)
+end
+        

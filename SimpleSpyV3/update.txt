@@ -1,4 +1,11 @@
 Update Logs:
-Mini update with stuff I will be doing a large/entire rewrite of stuff
-so do not expect any real updates any time soon I will work on making it more executor friendly
-and making it less detectable
+Patched detections
+
+Update note for syn v3 users:
+I will be adding syn.oth stuff soon:tm:
+
+NOTE FOR Synapse V3 USERS:
+hookmetamethod is detectable at the moment
+The only game I have seen using this detection is ERLC
+so consider staying away from ERLC until syn v3 patches it
+or I add a check a different method

@@ -1,11 +1,11 @@
 Update Logs:
-Patched detections
+Made syn v3 undetected
+improved security
+improved some hooking stuff
+fixed bugs (idk what)
+rewrote some back end stuff
 
-Update note for syn v3 users:
-I will be adding syn.oth stuff soon:tm:
-
-NOTE FOR Synapse V3 USERS:
-hookmetamethod is detectable at the moment
-The only game I have seen using this detection is ERLC
-so consider staying away from ERLC until syn v3 patches it
-or I add a check a different method
+todo:
+rewrite highlight system (soon:tm:)
+table cloning (instead of weak tables)
+rewrite instance to string function (kinda scuffed right now)

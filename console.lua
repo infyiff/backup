@@ -1,3 +1,5 @@
+-- https://github.com/wally-rblx
+
 local Instance_new = Instance.new
 local UDim2_new = UDim2.new
 local Color3_new = Color3.new

@@ -1,3 +1,6 @@
+-- | made by 0866 and Abacaxl
+-- | tysm unverified
+
 --[[---------Settings---------]]--
 local game = game
 local Players = game:GetService("Players")

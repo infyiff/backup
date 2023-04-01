@@ -868,10 +868,10 @@ local function main()
 
 		context:AddRegistered("CUT")
 		context:AddRegistered("COPY")
-		context:AddRegistered("PASTE",emptyClipboard)
+		context:AddRegistered("PASTE", emptyClipboard)
 		context:AddRegistered("DUPLICATE")
 		context:AddRegistered("DELETE")
-		context:AddRegistered("RENAME",#sList ~= 1)
+		context:AddRegistered("RENAME", #sList ~= 1)
 
 		context:AddDivider()
 		context:AddRegistered("GROUP")
@@ -900,6 +900,10 @@ local function main()
 		if presentClasses["BasePart"] or presentClasses["Model"] then
 			context:AddRegistered("TELEPORT_TO")
 			context:AddRegistered("VIEW_OBJECT")
+		end
+
+		if presentClasses["TouchTransmitter"] then
+			context:AddRegistered("FIRE_TOUCHTRANSMITTER", touchinterest ~= nil)
 		end
 
 		if presentClasses["Player"] then
@@ -1256,6 +1260,12 @@ local function main()
 			end
 		end, OnRightClick = function()
 			workspace.CurrentCamera.CameraSubject = plr.Character
+		end})
+
+		context:Register("FIRE_TOUCHTRANSMITTER",{Name = "Fire TouchTransmitter", OnClick = function()
+			local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+			if not hrp then return end
+			for _, v in ipairs(selection.List) do if v.Obj and v.Obj:IsA("TouchTransmitter") then firetouchinterest(hrp, v.Obj.Parent, 0) end end
 		end})
 
 		context:Register("VIEW_SCRIPT",{Name = "View Script", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()

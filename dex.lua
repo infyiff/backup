@@ -4,6 +4,7 @@
 	New Dex
 	Final Version
 	Developed by Moon
+	Modified for Infinite Yield
 	
 	Dex is a debugging suite designed to help the user debug games and find any potential vulnerabilities.
 	
@@ -854,11 +855,10 @@ local function main()
 		local presentClasses = {}
 		local apiClasses = API.Classes
 
-		for i = 1,#sList do
+		for i = 1, #sList do
 			local node = sList[i]
 			local class = node.Class
 			if not class then class = node.Obj.ClassName node.Class = class end
-
 			local curClass = apiClasses[class]
 			while curClass and not presentClasses[curClass.Name] do
 				presentClasses[curClass.Name] = true
@@ -882,12 +882,8 @@ local function main()
 		context:AddRegistered("COLLAPSE_ALL")
 
 		context:AddDivider()
-		if expanded == Explorer.SearchExpanded then
-			context:AddRegistered("CLEAR_SEARCH_AND_JUMP_TO")
-		end
-		if env.setclipboard then
-			context:AddRegistered("COPY_PATH")
-		end
+		if expanded == Explorer.SearchExpanded then context:AddRegistered("CLEAR_SEARCH_AND_JUMP_TO") end
+		if env.setclipboard then context:AddRegistered("COPY_PATH") end
 		context:AddRegistered("INSERT_OBJECT")
 		context:AddRegistered("SAVE_INST")
 		context:AddRegistered("CALL_FUNCTION")
@@ -902,24 +898,18 @@ local function main()
 			context:AddRegistered("VIEW_OBJECT")
 		end
 
-		if presentClasses["TouchTransmitter"] then
-			context:AddRegistered("FIRE_TOUCHTRANSMITTER", touchinterest ~= nil)
-		end
-
-		if presentClasses["Player"] then
-			context:AddRegistered("SELECT_CHARACTER")
-		end
-
-		if presentClasses["LuaSourceContainer"] then
-			context:AddRegistered("VIEW_SCRIPT")
-		end
+		if presentClasses["TouchTransmitter"] then context:AddRegistered("FIRE_TOUCHTRANSMITTER", firetouchinterest == nil) end
+		if presentClasses["ClickDetector"] then context:AddRegistered("FIRE_CLICKDETECTOR", fireclickdetector == nil) end
+		if presentClasses["ProximityPrompt"] then context:AddRegistered("FIRE_PROXIMITYPROMPT", fireproximityprompt == nil) end
+		if presentClasses["Player"] then context:AddRegistered("SELECT_CHARACTER") end
+		if presentClasses["LuaSourceContainer"] then context:AddRegistered("VIEW_SCRIPT") end
 
 		if sMap[nilNode] then
 			context:AddRegistered("REFRESH_NIL")
 			context:AddRegistered("HIDE_NIL")
 		end
 
-		Explorer.LastRightClickX,Explorer.LastRightClickY = Main.Mouse.X,Main.Mouse.Y
+		Explorer.LastRightClickX, Explorer.LastRightClickY = Main.Mouse.X, Main.Mouse.Y
 		context:Show()
 	end
 
@@ -1262,10 +1252,22 @@ local function main()
 			workspace.CurrentCamera.CameraSubject = plr.Character
 		end})
 
-		context:Register("FIRE_TOUCHTRANSMITTER",{Name = "Fire TouchTransmitter", OnClick = function()
+		context:Register("FIRE_TOUCHTRANSMITTER",{Name = "Fire TouchTransmitter", IconMap = Explorer.ClassIcons, Icon = 37, OnClick = function()
 			local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
 			if not hrp then return end
 			for _, v in ipairs(selection.List) do if v.Obj and v.Obj:IsA("TouchTransmitter") then firetouchinterest(hrp, v.Obj.Parent, 0) end end
+		end})
+
+		context:Register("FIRE_CLICKDETECTOR",{Name = "Fire ClickDetector", IconMap = Explorer.ClassIcons, Icon = 41, OnClick = function()
+			local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+			if not hrp then return end
+			for _, v in ipairs(selection.List) do if v.Obj and v.Obj:IsA("ClickDetector") then fireclickdetector(v.Obj) end end
+		end})
+
+		context:Register("FIRE_PROXIMITYPROMPT",{Name = "Fire ProximityPrompt", IconMap = Explorer.ClassIcons, Icon = 124, OnClick = function()
+			local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+			if not hrp then return end
+			for _, v in ipairs(selection.List) do if v.Obj and v.Obj:IsA("ProximityPrompt") then fireproximityprompt(v.Obj) end end
 		end})
 
 		context:Register("VIEW_SCRIPT",{Name = "View Script", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
@@ -10115,7 +10117,7 @@ Main = (function()
 	Main.ModuleList = {"Explorer","Properties","ScriptViewer"}
 	Main.Elevated = false
 	Main.MissingEnv = {}
-	Main.Version = "Beta 1.0.0"
+	Main.Version = "" -- Beta 1.0.0
 	Main.Mouse = plr:GetMouse()
 	Main.AppControls = {}
 	Main.Apps = Apps
@@ -10214,9 +10216,9 @@ Main = (function()
 	end
 	
 	Main.InitEnv = function()
-		setmetatable(env,{__newindex = function(self,name,func)
-			if not func then Main.MissingEnv[#Main.MissingEnv+1] = name return end
-			rawset(self,name,func)
+		setmetatable(env, {__newindex = function(self, name, func)
+			if not func then Main.MissingEnv[#Main.MissingEnv + 1] = name return end
+			rawset(self, name, func)
 		end})
 		
 		-- file
@@ -10245,13 +10247,11 @@ Main = (function()
 		env.getnilinstances = getnilinstances or get_nil_instances
 		env.getloadedmodules = getloadedmodules
 		
-		if identifyexecutor then
-			Main.Executor = identifyexecutor()
-		end
+		if identifyexecutor then Main.Executor = identifyexecutor() end
 		
 		Main.GuiHolder = Main.Elevated and service.CoreGui or plr:FindFirstChildOfClass("PlayerGui")
 		
-		setmetatable(env,nil)
+		setmetatable(env, nil)
 	end
 	
 	--[[
@@ -10621,7 +10621,7 @@ Main = (function()
 			{10,"ImageLabel",{BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=1,Image="rbxassetid://2764171053",ImageColor3=Color3.new(0.17647059261799,0.17647059261799,0.17647059261799),Parent={8},ScaleType=1,Size=UDim2.new(1,0,1,0),SliceCenter=Rect.new(2,2,254,254),}},
 			{11,"TextLabel",{BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=1,Font=3,Name="Creator",Parent={2},Position=UDim2.new(1,-110,1,-20),Size=UDim2.new(0,105,0,20),Text="Developed by Moon",TextColor3=Color3.new(1,1,1),TextSize=14,TextXAlignment=1,}},
 			{12,"UIGradient",{Parent={11},Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1,0),NumberSequenceKeypoint.new(1,1,0),}),}},
-			{13,"TextLabel",{BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=1,Font=3,Name="Version",Parent={2},Position=UDim2.new(1,-110,1,-35),Size=UDim2.new(0,105,0,20),Text="Beta 1.0.0",TextColor3=Color3.new(1,1,1),TextSize=14,TextXAlignment=1,}},
+			{13,"TextLabel",{BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=1,Font=3,Name="Version",Parent={2},Position=UDim2.new(1,-110,1,-35),Size=UDim2.new(0,105,0,20),Text=Main.Version,TextColor3=Color3.new(1,1,1),TextSize=14,TextXAlignment=1,}},
 			{14,"UIGradient",{Parent={13},Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1,0),NumberSequenceKeypoint.new(1,1,0),}),}},
 			{15,"ImageLabel",{BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=1,BorderSizePixel=0,Image="rbxassetid://1427967925",Name="Outlines",Parent={2},Position=UDim2.new(0,-5,0,-5),ScaleType=1,Size=UDim2.new(1,10,1,10),SliceCenter=Rect.new(6,6,25,25),TileSize=UDim2.new(0,20,0,20),}},
 			{16,"UIGradient",{Parent={15},Rotation=-30,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1,0),NumberSequenceKeypoint.new(1,1,0),}),}},

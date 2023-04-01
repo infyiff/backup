@@ -10886,9 +10886,7 @@ Main = (function()
 	
 	Main.SetupFilesystem = function()
 		if not env.writefile or not env.makefolder then return end
-		
-		local writefile,makefolder = env.writefile,env.makefolder
-		
+		local writefile, makefolder = env.writefile, env.makefolder
 		makefolder("dex")
 		makefolder("dex/assets")
 		makefolder("dex/saved")

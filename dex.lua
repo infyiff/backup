@@ -16,6 +16,8 @@
 	Note that very limited to no support will be provided.
 ]]
 
+local nodes = {}
+local selection
 local clonerefs = cloneref or function(...) return ... end
 
 local EmbeddedModules = {
@@ -55,7 +57,7 @@ end
 
 local function main()
 	local Explorer = {}
-	local nodes,tree,listEntries,explorerOrders,searchResults,specResults = {},{},{},{},{},{}
+	local tree,listEntries,explorerOrders,searchResults,specResults = {},{},{},{},{}
 	local expanded
 	local entryTemplate,treeFrame,toolBar,descendantAddedCon,descendantRemovingCon,itemChangedCon
 	local ffa = game.FindFirstAncestorWhichIsA
@@ -64,7 +66,7 @@ local function main()
 	local updateDebounce,refreshDebounce = false,false
 	local nilNode = {Obj = Instance.new("Folder")}
 	local idCounter = 0
-	local scrollV,scrollH,selection,clipboard
+	local scrollV,scrollH,clipboard
 	local renameBox,renamingNode,searchFunc
 	local sortingEnabled,autoUpdateSearch
 	local table,math = table,math
@@ -10880,6 +10882,22 @@ Main = (function()
 		Main.CreateApp({Name = "Properties", IconMap = Main.LargeIcons, Icon = "Properties", Open = true, Window = Properties.Window})
 		
 		Main.CreateApp({Name = "Script Viewer", IconMap = Main.LargeIcons, Icon = "Script_Viewer", Window = ScriptViewer.Window})
+
+		local cptsOnMouseClick = nil
+		Main.CreateApp({Name = "Click part to select", IconMap = Main.LargeIcons, Icon = 6, OnClick = function(callback)
+			if callback then
+				local mouse = Main.Mouse
+				cptsOnMouseClick = mouse.Button1Down:Connect(function()
+					pcall(function()
+						local object = mouse.Target
+						if nodes[object] then
+							selection:Set(nodes[object])
+							Explorer.ViewNode(nodes[object])
+						end
+					end)
+				end)
+			else if cptsOnMouseClick ~= nil then cptsOnMouseClick:Disconnect() cptsOnMouseClick = nil end end
+		end})
 		
 		Lib.ShowGui(gui)
 	end

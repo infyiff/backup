@@ -920,7 +920,7 @@ end
 --- @param remote any
 --- @param function_info string
 --- @param blocked any
-function newRemote(type, name, args, remote, func, blocked, src, metamethod,info)
+function newRemote(type, name, args, remote, func, blocked, src, metamethod,info,id)
     if layoutOrderNum < 1 then layoutOrderNum = 999999999 end
     local RemoteTemplate = Create("Frame",{LayoutOrder = layoutOrderNum,Name = "RemoteTemplate",Parent = LogList,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Size = UDim2.new(0, 117, 0, 27)})
     local ColorBar = Create("Frame",{Name = "ColorBar",Parent = RemoteTemplate,BackgroundColor3 = (type == "event" and Color3.fromRGB(255, 242, 0)) or Color3.fromRGB(99, 86, 245),BorderSizePixel = 0,Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 7, 0, 18),ZIndex = 2})
@@ -931,6 +931,7 @@ function newRemote(type, name, args, remote, func, blocked, src, metamethod,info
         Name = name,
         Function = func,
         Remote = cloneref(remote),
+        DebugId = id,
         metamethod = metamethod,
         args = configs.weaktables and setmetatable(args,{__mode="kv"}) or args,
         info = info,
@@ -1292,11 +1293,10 @@ function f2s(f)
         end
     end
     if configs.funcEnabled then
-        local funcinfo = getinfo(f)
-        local funcinfoname = funcinfo and funcinfo.name
+        local funcname = debug.info(f,"n")
         
-        if funcinfoname and funcinfoname:match("^[%a_]+[%w_]*$") then
-            return ("function() %s end"):format(funcinfoname)
+        if funcname and funcname:match("^[%a_]+[%w_]*$") then
+            return ("function() %s end"):format(funcname)
         end
     end
     return ("function() %s end"):format(Safetostring(f))
@@ -1600,7 +1600,7 @@ function remoteHandler(methodName, remote, args, info, callingscript, metamethod
 
         local functionInfoStr = info and info.func or "--Function Info is disabled"
 
-        newRemote(lower(methodName) == "fireserver" and "event" or "function", remote.Name, args, remote, functionInfoStr, blockcheck, callingscript, metamethod,info)
+        newRemote(remote:IsA("RemoteEvent") and lower(methodName) == "fireserver" and "event" or "function", remote.Name, args, remote, functionInfoStr, blockcheck, callingscript, metamethod, info, id)
     end
 end
 
@@ -1807,7 +1807,7 @@ if not getgenv().SimpleSpyExecuted then
         bringBackOnResize()
         SimpleSpy3.Parent = (gethui and gethui()) or (syn and syn.protect_gui and syn.protect_gui(SimpleSpy3)) or CoreGui
         spawn(function()
-            local lp = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() and Players.LocalPlayer
+            local lp = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() or Players.LocalPlayer
             generation = {
                 [GetDebugId(lp)] = 'game:GetService("Players").LocalPlayer',
                 [GetDebugId(lp:GetMouse())] = 'game:GetService("Players").LocalPlayer:GetMouse',
@@ -1928,7 +1928,10 @@ newButton(
                         info = getinfo(func),
                         constants = islclosure(func) and setmetatable(getconstants(func), {__mode="kv"}) or "nil --Lua Closure expected got C Closure",
                         upvalues = setmetatable(getupvalues(func), {__mode="kv"}), --Thank you GameGuy#5286
-                        script = rawget(getfenv(selected.info.func),"script")
+                        script = {
+                            SourceScript = selected.info and rawget(getfenv(selected.info.func),"script") or 'nil',
+                            CallingScript = selected.Source
+                        }
                     }
                     
                     if configs.advancedinfo then
@@ -1936,6 +1939,7 @@ newButton(
 
                         selected.Function["advancedinfo"] = {
                             metamethod = selected.metamethod,
+                            DebugId = selected.DebugId,
                             protos = islclosure(func) and setmetatable(getprotos(func), {__mode="kv"}) or "nil --Lua Closure expected got C Closure"
                         }
                         if Remote:IsA("RemoteFunction") then

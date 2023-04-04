@@ -4276,7 +4276,7 @@ local function main()
                     end
                     function functions:dump_table(input, indent, index)
                         local indent = indent < 0 and 0 or indent
-                        functions:add_to_dump(("%s [%s] %s"):format(tostring(index), tostring(type(input)), tostring(input)), indent - 1)
+                        functions:add_to_dump(("%s [%s] %s"):format(tostring(index), tostring(typeof(input)), tostring(input)), indent - 1)
                         local count = 0
                         for index, value in pairs(input) do
                             count = count + 1
@@ -4291,7 +4291,7 @@ local function main()
                                     functions:add_to_dump(("%d [table] (Recursive table detected)"):format(count), indent)
                                 end
                             else
-                                functions:add_to_dump(("%d [%s] = %s"):format(count, tostring(type(value)), tostring(value)), indent)
+                                functions:add_to_dump(("%d [%s] = %s"):format(count, tostring(typeof(value)), tostring(value)), indent)
                             end
                         end
                     end
@@ -4310,7 +4310,7 @@ local function main()
                                     functions:add_to_dump(("%d [table] (Recursive table detected)"):format(index), indent + 1)
                                 end
                             else
-                                functions:add_to_dump(("%d [%s] = %s"):format(index, tostring(type(upvalue)), tostring(upvalue)), indent + 1)
+                                functions:add_to_dump(("%d [%s] = %s"):format(index, tostring(typeof(upvalue)), tostring(upvalue)), indent + 1)
                             end
                         end
                         functions:add_to_dump(("\nFunction Constants: %s"):format(functions:get_function_name(input)), indent)
@@ -4326,12 +4326,12 @@ local function main()
                                     functions:add_to_dump(("%d [table] (Recursive table detected)"):format(index), indent + 1)
                                 end
                             else
-                                functions:add_to_dump(("%d [%s] = %s"):format(index, tostring(type(constant)), tostring(constant)), indent + 1)
+                                functions:add_to_dump(("%d [%s] = %s"):format(index, tostring(typeof(constant)), tostring(constant)), indent + 1)
                             end
                         end
                     end
                     for _, _function in pairs(getgc()) do
-                        if getfenv(_function).script and getfenv(_function).script == PreviousScr and type(_function) == "function" then
+                        if getfenv(_function).script and getfenv(_function).script == PreviousScr and typeof(_function) == "function" then
                             functions:dump_function(_function, 0)
                             functions:add_to_dump("\n" .. ("="):rep(100), 0, false)
                         end

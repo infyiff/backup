@@ -1193,16 +1193,21 @@ local function main()
 			end
 		end})
 
+		local clth = function(str)
+			if str:sub(1, 28) == "game:GetService(\"Workspace\")" then str = str:gsub("game:GetService%(\"Workspace\"%)", "workspace", 1) end
+			if str:sub(1, 27 + #plr.Name) == "game:GetService(\"Players\")." .. plr.Name then str = str:gsub("game:GetService%(\"Players\"%)." .. plr.Name, "game:GetService(\"Players\").LocalPlayer", 1) end
+			return str
+		end
+
 		context:Register("COPY_PATH",{Name = "Copy Path", OnClick = function()
-			local clean = function(str) if str:sub(1, 28) == "game:GetService(\"Workspace\")" then str = str:gsub("game:GetService%(\"Workspace\"%)", "workspace", 1) end return str end
 			local sList = selection.List
 			if #sList == 1 then
-				env.setclipboard(clean(Explorer.GetInstancePath(sList[1].Obj)))
+				env.setclipboard(clth(Explorer.GetInstancePath(sList[1].Obj)))
 			elseif #sList > 1 then
 				local resList = {"{"}
 				local count = 2
 				for i = 1,#sList do
-					local path = "\t"..clean(Explorer.GetInstancePath(sList[i].Obj))..","
+					local path = "\t"..clth(Explorer.GetInstancePath(sList[i].Obj))..","
 					if #path > 0 then
 						resList[count] = path
 						count = count+1

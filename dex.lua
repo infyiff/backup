@@ -904,6 +904,7 @@ local function main()
 		if presentClasses["ClickDetector"] then context:AddRegistered("FIRE_CLICKDETECTOR", fireclickdetector == nil) end
 		if presentClasses["ProximityPrompt"] then context:AddRegistered("FIRE_PROXIMITYPROMPT", fireproximityprompt == nil) end
 		if presentClasses["Player"] then context:AddRegistered("SELECT_CHARACTER") end
+		if presentClasses["Players"] then context:AddRegistered("SELECT_LOCAL_PLAYER") end
 		if presentClasses["LuaSourceContainer"] then context:AddRegistered("VIEW_SCRIPT") end
 
 		if sMap[nilNode] then
@@ -1303,6 +1304,10 @@ local function main()
 			else
 				Explorer.Refresh()
 			end
+		end})
+
+		context:Register("SELECT_LOCAL_PLAYER",{Name = "Select Local Player", IconMap = Explorer.ClassIcons, Icon = 9, OnClick = function()
+			pcall(function() if nodes[plr] then selection:Set(nodes[plr]) Explorer.ViewNode(nodes[plr]) end end)
 		end})
 
 		context:Register("REFRESH_NIL",{Name = "Refresh Nil Instances", OnClick = function()

@@ -4342,7 +4342,7 @@ local function main()
                         end
                     end
                     for _, _function in pairs(getgc()) do
-                        if getfenv(_function).script and getfenv(_function).script == PreviousScr and typeof(_function) == "function" then
+                        if typeof(_function) == "function" and getfenv(_function).script and getfenv(_function).script == PreviousScr then
                             functions:dump_function(_function, 0)
                             functions:add_to_dump("\n" .. ("="):rep(100), 0, false)
                         end

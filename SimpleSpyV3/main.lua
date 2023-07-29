@@ -5,30 +5,26 @@ if getgenv().SimpleSpyExecuted and type(getgenv().SimpleSpyShutdown) == "functio
     getgenv().SimpleSpyShutdown()
 end
 
-local configs = {
+local realconfigs = {
     logcheckcaller = false,
     autoblock = false,
     funcEnabled = true,
     advancedinfo = false,
-    logreturnvalues = false,
+    --logreturnvalues = false,
     supersecretdevtoggle = false
 }
 
-local game = game
-local workspace = workspace
-local table = table
-local math = math
-local task = task
-local debug = debug
-local coroutine = coroutine
-local string = string
-local Color3 = Color3
-local Instance = Instance
-local syn = syn 
-local oth = syn and syn.oth
+local configs = newproxy(true)
+local configsmetatable = getmetatable(configs)
 
+configsmetatable.__index = function(self,index)
+    return realconfigs[index]
+end
+
+local oth = syn and syn.oth
 local unhook = oth and oth.unhook
 local hook = oth and oth.hook
+
 local lower = string.lower
 local byte = string.byte
 local round = math.round
@@ -38,9 +34,10 @@ local status = coroutine.status
 local yield = coroutine.yield
 local create = coroutine.create
 local close = coroutine.close
+local OldDebugId = game.GetDebugId
 local info = debug.info
 
-local GetDebugId = game.GetDebugId
+local IsA = game.IsA
 local tostring = tostring
 local tonumber = tonumber
 local delay = task.delay
@@ -48,14 +45,49 @@ local spawn = task.spawn
 local clear = table.clear
 local clone = table.clone
 
-local get_thread_identity = (syn and syn.get_thread_identity) or getthreadidentity
-local set_thread_identity = (syn and syn.set_thread_identity) or setidentity
-local getcustomasset = getsynasset or getcustomasset
-local clonefunction = clonefunction or function(func)
-    return func
+local function blankfunction(...)
+    return ...
 end
-local cloneref = cloneref or function(instance)
-    return instance
+
+local get_thread_identity = (syn and syn.get_thread_identity) or getidentity or getthreadidentity
+local set_thread_identity = (syn and syn.set_thread_identity) or setidentity
+local islclosure = islclosure or is_l_closure
+local threadfuncs = (get_thread_identity and set_thread_identity and true) or false
+
+local getinfo = getinfo or blankfunction
+local getupvalues = getupvalues or debug.getupvalues or blankfunction
+local getconstants = getconstants or debug.getconstants or blankfunction
+
+local getcustomasset = getsynasset or getcustomasset
+local getcallingscript = getcallingscript or blankfunction
+local newcclosure = newcclosure or blankfunction
+local clonefunction = clonefunction or blankfunction
+local cloneref = cloneref or blankfunction
+local request = request or syn and syn.request
+local makewritable = makewriteable or function(tbl)
+    setreadonly(tbl,false)
+end
+local makereadonly = makereadonly or function(tbl)
+    setreadonly(tbl,true)
+end
+local isreadonly = isreadonly or table.isfrozen
+
+local setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set) or function(...)
+    return ErrorPrompt("Attempted to set clipboard: "..(...),true)
+end
+
+local hookmetamethod = hookmetamethod or (makewriteable and makereadonly and getrawmetatable) and function(obj: object, metamethod: string, func: Function)
+    local old = getrawmetatable(obj)
+
+    if hookfunction then
+        return hookfunction(old[metamethod],func)
+    else
+        local oldmetamethod = old[metamethod]
+        makewriteable(old)
+        old[metamethod] = func
+        makereadonly(old)
+        return oldmetamethod
+    end
 end
 
 local function Create(instance, properties, children)
@@ -74,10 +106,37 @@ local function SafeGetService(service)
     return cloneref(game:GetService(service))
 end
 
-local function deepclone(args: table, copies: table)
+local function Search(logtable,tbl)
+    table.insert(logtable,tbl)
+    
+    for i,v in tbl do
+        if type(v) == "table" then
+            return table.find(logtable,v) ~= nil or Search(v)
+        end
+    end
+end
+
+local function IsCyclicTable(tbl)
+	local checkedtables = {}
+
+    local function SearchTable(tbl)
+        table.insert(checkedtables,tbl)
+        
+        for i,v in tbl do
+            if type(v) == "table" then
+                return table.find(checkedtables,v) and true or SearchTable(v)
+            end
+        end
+    end
+
+	return SearchTable(tbl)
+end
+
+local function deepclone(args: table, copies: table): table
+    local copy = nil
     copies = copies or {}
-    local copy
-    if typeof(args) == 'table' then
+
+    if type(args) == 'table' then
         if copies[args] then
             copy = copies[args]
         else
@@ -87,21 +146,30 @@ local function deepclone(args: table, copies: table)
                 copy[deepclone(i, copies)] = deepclone(v, copies)
             end
         end
+    elseif typeof(args) == "Instance" then
+        copy = cloneref(args)
     else
         copy = args
     end
     return copy
 end
 
-local function Safetostring(userdata)
+local function rawtostring(userdata)
 	if type(userdata) == "table" or typeof(userdata) == "userdata" then
 		local rawmetatable = getrawmetatable(userdata)
 		local cachedstring = rawmetatable and rawget(rawmetatable, "__tostring")
 
 		if cachedstring then
+            local wasreadonly = isreadonly(rawmetatable)
+            if wasreadonly then
+                makewritable(rawmetatable)
+            end
 			rawset(rawmetatable, "__tostring", nil)
 			local safestring = tostring(userdata)
 			rawset(rawmetatable, "__tostring", cachedstring)
+            if wasreadonly then
+                makereadonly(rawmetatable)
+            end
 			return safestring
 		end
 	end
@@ -118,9 +186,12 @@ local TextService = SafeGetService("TextService")
 local http = SafeGetService("HttpService")
 
 local function jsone(str) return http:JSONEncode(str) end
-local function jsond(str) return http:JSONDecode(str) end
+local function jsond(str)
+    local suc,err = pcall(http.JSONDecode,http,str)
+    return suc and err or suc
+end
 
-local function ErrorPrompt(Message,state)
+function ErrorPrompt(Message,state)
     if getrenv then
         local ErrorPrompt = getrenv().require(CoreGui:WaitForChild("RobloxGui"):WaitForChild("Modules"):WaitForChild("ErrorPrompt")) -- File can be located in your roblox folder (C:\Users\%Username%\AppData\Local\Roblox\Versions\whateverversionitis\ExtraContent\scripts\CoreScripts\Modules)
         local prompt = ErrorPrompt.new("Default",{HideErrorCode = true})
@@ -148,10 +219,10 @@ local function ErrorPrompt(Message,state)
     end
 end
 
-local Highlight = loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/highlight.lua"))() -- (isfile and loadfile and isfile("Highlight.lua") and loadfile("Highlight.lua")()) or loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/Highlight.lua"))()
+local Highlight = (isfile and loadfile and isfile("Highlight.lua") and loadfile("Highlight.lua")()) or loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/Highlight.lua"))()
 
 local SimpleSpy3 = Create("ScreenGui",{ResetOnSpawn = false})
-local Storage = Create("Folder",{Parent = SimpleSpy3})
+local Storage = Create("Folder",{})
 local Background = Create("Frame",{Parent = SimpleSpy3,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Position = UDim2.new(0, 500, 0, 200),Size = UDim2.new(0, 450, 0, 268)})
 local LeftPanel = Create("Frame",{Parent = Background,BackgroundColor3 = Color3.fromRGB(53, 52, 55),BorderSizePixel = 0,Position = UDim2.new(0, 0, 0, 19),Size = UDim2.new(0, 131, 0, 249)})
 local LogList = Create("ScrollingFrame",{Parent = LeftPanel,Active = true,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,BorderSizePixel = 0,Position = UDim2.new(0, 0, 0, 9),Size = UDim2.new(0, 131, 0, 232),CanvasSize = UDim2.new(0, 0, 0, 0),ScrollBarThickness = 4})
@@ -231,45 +302,48 @@ local connections = {}
 local DecompiledScripts = {}
 local generation = {}
 local running_threads = {}
-local writefiletoggle = false
 local originalnamecall
 
 local remoteEvent = Instance.new("RemoteEvent",Storage)
 local remoteFunction = Instance.new("RemoteFunction",Storage)
+local NamecallHandler = Instance.new("BindableEvent",Storage)
+local IndexHandler = Instance.new("BindableEvent",Storage)
+local GetDebugIdHandler = Instance.new("BindableFunction",Storage) --Thanks engo for the idea of using BindableFunctions
+
 local originalEvent = remoteEvent.FireServer
 local originalFunction = remoteFunction.InvokeServer
+local GetDebugIDInvoke = GetDebugIdHandler.Invoke
 
-local methodtypes = {
-    ["fireServer"] = true,
-    ["invokeServer"] = true,
-    ["FireServer"] = true,
-    ["InvokeServer"] = true
-}
+function GetDebugIdHandler.OnInvoke(obj: Instance) -- To avoid having to set thread identity and ect
+    return OldDebugId(obj)
+end
 
-local getinfolevel = 3
+local function ThreadGetDebugId(obj: Instance): string 
+    return GetDebugIDInvoke(GetDebugIdHandler,obj) -- indexing to avoid having to setnamecall later
+end
+
 local synv3 = false
 
 if syn and identifyexecutor then
     local _, version = identifyexecutor()
     if (version and version:sub(1, 2) == 'v3') then
-        getinfolevel = 1
         synv3 = true
     end
 end
 
 xpcall(function()
-    local cachedconfigs = isfile and readfile and isfile("SimpleSpy//Settings.json") and jsond(readfile("SimpleSpy//Settings.json"))
+    if isfile and readfile and isfolder and makefolder then
+        local cachedconfigs = isfile("SimpleSpy//Settings.json") and jsond(readfile("SimpleSpy//Settings.json"))
 
-    if cachedconfigs then
-        for i,v in next, configs do
-            if cachedconfigs[i] == nil then
-                cachedconfigs[i] = v
+        if cachedconfigs then
+            for i,v in next, realconfigs do
+                if cachedconfigs[i] == nil then
+                    cachedconfigs[i] = v
+                end
             end
+            realconfigs = cachedconfigs
         end
-        configs = cachedconfigs
-    end
 
-    if makefolder and isfolder and isfile and writefile then
         if not isfolder("SimpleSpy") then
             makefolder("SimpleSpy")
         end
@@ -277,19 +351,23 @@ xpcall(function()
             makefolder("SimpleSpy//Assets")
         end
         if not isfile("SimpleSpy//Settings.json") then
-            writefile("SimpleSpy//Settings.json",jsone(configs))
+            writefile("SimpleSpy//Settings.json",jsone(realconfigs))
         end
-        spawn(function()
-            repeat wait(6)
-                writefile("SimpleSpy//Settings.json",jsone(configs))
-            until not writefiletoggle
-        end)
+
+        configsmetatable.__newindex = function(self,index,newindex)
+            realconfigs[index] = newindex
+            writefile("SimpleSpy//Settings.json",jsone(realconfigs))
+        end
+    else
+        configsmetatable.__newindex = function(self,index,newindex)
+            realconfigs[index] = newindex
+        end
     end
 end,function(err)
     ErrorPrompt(("An error has occured: (%s)"):format(err))
 end)
 
-local function log(thread: thread)
+local function logthread(thread: thread)
     table.insert(running_threads,thread)
 end
 
@@ -315,6 +393,10 @@ function clean()
         end
         remoteLogs = newLogs
     end
+end
+
+local function ThreadIsNotDead(thread: thread): boolean
+    return not status(thread) == "dead"
 end
 
 --- Scales the ToolTip to fit containing text
@@ -610,15 +692,12 @@ end
 --- @param p Vector2
 function isInDragRange(p)
     local relativeP = p - Background.AbsolutePosition
-    if relativeP.X <= TopBar.AbsoluteSize.X - CloseButton.AbsoluteSize.X * 3 and relativeP.X >= 0
-        and relativeP.Y <= TopBar.AbsoluteSize.Y and relativeP.Y >= 0 then
-        return true
-    end
-    return false
+    local topbarAS = TopBar.AbsoluteSize
+    return relativeP.X <= topbarAS.X - CloseButton.AbsoluteSize.X * 3 and relativeP.X >= 0 and relativeP.Y <= topbarAS.Y and relativeP.Y >= 0 or false
 end
 
 --- Called when mouse enters SimpleSpy
-local customCursor = Create("ImageLabel",{Parent = SimpleSpy3,Visible = false,Size = UDim2.fromOffset(200, 200),ZIndex = 1e5,BackgroundTransparency = 1,Image = "",Parent = SimpleSpy3})
+local customCursor = Create("ImageLabel",{Parent = SimpleSpy3,Visible = false,Size = UDim2.fromOffset(200, 200),ZIndex = 1e9,BackgroundTransparency = 1,Image = "",Parent = SimpleSpy3})
 function mouseEntered()
     local con = connections["SIMPLESPY_CURSOR"]
     if con then
@@ -875,6 +954,7 @@ function newButton(name, description, onClick)
         makeToolTip(false)
     end)
     Button.MouseButton1Click:Connect(function(...)
+        logthread(running())
         onClick(FunctionTemplate, ...)
     end)
     updateFunctionCanvas()
@@ -887,35 +967,36 @@ end
 --- @param remote any
 --- @param function_info string
 --- @param blocked any
-function newRemote(type, name, args, remote, func, blocked, src, metamethod,info,id)
+function newRemote(type, data)
     if layoutOrderNum < 1 then layoutOrderNum = 999999999 end
+    local remote = data.remote
+    local callingscript = data.callingscript
+
     local RemoteTemplate = Create("Frame",{LayoutOrder = layoutOrderNum,Name = "RemoteTemplate",Parent = LogList,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Size = UDim2.new(0, 117, 0, 27)})
     local ColorBar = Create("Frame",{Name = "ColorBar",Parent = RemoteTemplate,BackgroundColor3 = (type == "event" and Color3.fromRGB(255, 242, 0)) or Color3.fromRGB(99, 86, 245),BorderSizePixel = 0,Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 7, 0, 18),ZIndex = 2})
-    local Text = Create("TextLabel",{TextTruncate = Enum.TextTruncate.AtEnd,Name = "Text",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Position = UDim2.new(0, 12, 0, 1),Size = UDim2.new(0, 105, 0, 18),ZIndex = 2,Font = Enum.Font.SourceSans,Text = name,TextColor3 = Color3.new(1, 1, 1),TextSize = 14,TextXAlignment = Enum.TextXAlignment.Left})
+    local Text = Create("TextLabel",{TextTruncate = Enum.TextTruncate.AtEnd,Name = "Text",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Position = UDim2.new(0, 12, 0, 1),Size = UDim2.new(0, 105, 0, 18),ZIndex = 2,Font = Enum.Font.SourceSans,Text = remote.Name,TextColor3 = Color3.new(1, 1, 1),TextSize = 14,TextXAlignment = Enum.TextXAlignment.Left})
     local Button = Create("TextButton",{Name = "Button",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(0, 0, 0),BackgroundTransparency = 0.75,BorderColor3 = Color3.new(1, 1, 1),Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 117, 0, 18),AutoButtonColor = false,Font = Enum.Font.SourceSans,Text = "",TextColor3 = Color3.new(0, 0, 0),TextSize = 14})
 
     local log = {
-        Name = name,
-        Function = func,
-        Remote = cloneref(remote),
-        DebugId = id,
-        metamethod = metamethod,
-        args = deepclone(args),
-        info = info,
+        Name = remote.name,
+        Function = data.infofunc or "--Function Info is disabled",
+        Remote = remote,
+        DebugId = data.id,
+        metamethod = data.metamethod,
+        args = data.args,
         Log = RemoteTemplate,
         Button = Button,
-        Blocked = blocked,
-        Source = src and cloneref(src),
-        GenScript = "-- Generating, please wait...\n-- (If this message persists, the remote args are likely extremely long)",
-        LastGen = ""
+        Blocked = data.blocked,
+        Source = callingscript,
+        returnvalue = data.returnvalue,
+        GenScript = "-- Generating, please wait...\n-- (If this message persists, the remote args are likely extremely long)"
     }
-    if src and not DecompiledScripts[src] then
-        DecompiledScripts[src] = nil
-    end
+
     logs[#logs + 1] = log
     local connect = Button.MouseButton1Click:Connect(function()
+        logthread(running())
         eventSelect(RemoteTemplate)
-        log.GenScript = genScript(remote, log.args)
+        log.GenScript = genScript(log.Remote, log.args)
         if blocked then
             log.GenScript = "-- THIS REMOTE WAS PREVENTED FROM FIRING TO THE SERVER BY SIMPLESPY\n\n" .. log.GenScript
         end
@@ -937,7 +1018,7 @@ function genScript(remote, args)
         xpcall(function()
             gen = v2v({args = args}) .. "\n"
         end,function(err)
-            gen = gen.."-- An error has occured:\n--"..err.."\n-- TableToString failure! Reverting to legacy functionality (results may vary)\nlocal args = {"
+            gen ..= "-- An error has occured:\n--"..err.."\n-- TableToString failure! Reverting to legacy functionality (results may vary)\nlocal args = {"
             xpcall(function()
                 for i, v in next, args do
                     if type(i) ~= "Instance" and type(i) ~= "userdata" then
@@ -959,24 +1040,24 @@ function genScript(remote, args)
                         gen = gen .. "game." .. v:GetFullName()
                     end
                 end
-                gen = gen .. "\n}\n\n"
+                gen ..= "\n}\n\n"
             end,function()
-                gen = gen .. "}\n-- Legacy tableToString failure! Unable to decompile."
+                gen ..= "}\n-- Legacy tableToString failure! Unable to decompile."
             end)
         end)
         if not remote:IsDescendantOf(game) and not getnilrequired then
             gen = "function getNil(name,class) for _,v in next, getnilinstances()do if v.ClassName==class and v.Name==name then return v;end end end\n\n" .. gen
         end
         if remote:IsA("RemoteEvent") then
-            gen = gen .. v2s(remote) .. ":FireServer(unpack(args))"
+            gen ..= v2s(remote) .. ":FireServer(unpack(args))"
         elseif remote:IsA("RemoteFunction") then
             gen = gen .. v2s(remote) .. ":InvokeServer(unpack(args))"
         end
     else
         if remote:IsA("RemoteEvent") then
-            gen = gen .. v2s(remote) .. ":FireServer()"
+            gen ..= v2s(remote) .. ":FireServer()"
         elseif remote:IsA("RemoteFunction") then
-            gen = gen .. v2s(remote) .. ":InvokeServer()"
+            gen ..= v2s(remote) .. ":InvokeServer()"
         end
     end
     prevTables = {}
@@ -984,38 +1065,58 @@ function genScript(remote, args)
 end
 
 --- value-to-string: value, string (out), level (indentation), parent table, var name, is from tovar
-
-local ufunctions = {
-    TweenInfo = function(u)
-        return ("TweenInfo.new(%s, %s, %s, %s, %s, %s)"):format(Safetostring(u.Time),Safetostring(u.EasingStyle),Safetostring(u.EasingDirection),Safetostring(u.RepeatCount),Safetostring(u.Reverses),Safetostring(u.DelayTime))
-    end,
-    Ray = function(u)
-        return ("Ray.new(%s)"):format(Safetostring(u))
-    end,
-    NumberSequence = function(u)
-        return ("NumberRange.new(%s, %s)"):format(Safetostring(u.Min),Safetostring(u.Max))
-    end,
-    ColorSequence = function(u)
-        local ret = "ColorSequence.new("
-        for i, v in next, u.KeyPoints do
-            ret = ret ..("Color3.new(%s)"):format(Safetostring(v))
-            if i < #u.Keypoints then
-                ret = ret .. ", "
+local CustomGeneration = {
+    Vector3 = (function()
+        local temp = {}
+        for i,v in Vector3 do
+            if type(v) == "vector" then
+                temp[v] = `Vector3.{i}`
             end
         end
-        return ret .. ")"
+        return temp
+    end)(),
+    Vector2 = (function()
+        local temp = {}
+        for i,v in Vector2 do
+            if type(v) == "userdata" then
+                temp[v] = `Vector2.{i}`
+            end
+        end
+        return temp
+    end)(),
+    CFrame = {
+        [CFrame.identity] = "CFrame.identity"
+    }
+}
+
+local number_table = {
+    ["inf"] = "math.huge",
+    ["-inf"] = "-math.huge",
+    ["nan"] = "0/0"
+}
+
+local ufunctions
+ufunctions = {
+    TweenInfo = function(u)
+        return `TweenInfo.new({u.Time}, {u.EasingStyle}, {u.EasingDirection}, {u.RepeatCount}, {u.Reverses}, {u.DelayTime})`
+    end,
+    Ray = function(u)
+        local Vector3tostring = ufunctions["Vector3"]
+
+        return `Ray.new({Vector3tostring(u.Origin)}, {Vector3tostring(u.Direction)})`
     end,
     BrickColor = function(u)
-        return ("BrickColor.new(%s)"):format(Safetostring(u.Number))
+        return `BrickColor.new({u.Number})`
     end,
     NumberRange = function(u)
-        return ("NumberRange.new(%s, %s)"):format(Safetostring(u.Min),Safetostring(u.Max))
+        return `NumberRange.new({u.Min}, {u.Max})`
     end,
     Region3 = function(u)
         local center = u.CFrame.Position
-        local centersize = u.Size
-        
-        return ("Region3.new(%s, %s)"):format(v2s(center-centersize/2),v2s(center+centersize/2))
+        local centersize = u.Size/2
+        local Vector3tostring = ufunctions["Vector3"]
+
+        return `Region3.new({Vector3tostring(center-centersize)}, {Vector3tostring(center+centersize)})`
     end,
     Faces = function(u)
         local faces = {}
@@ -1037,77 +1138,72 @@ local ufunctions = {
         if u.Front then
             table.insert(faces, "Enum.NormalId.Front")
         end
-        return ("Faces.new(%s)"):format(table.concat(faces, ", "))
+        return `Faces.new({table.concat(faces, ", ")})`
     end,
     EnumItem = function(u)
-        return Safetostring(u)
+        return tostring(u)
     end,
     Enums = function(u)
         return "Enum"
     end,
     Enum = function(u)
-        return "Enum." .. Safetostring(u)
-    end,
-    RBXScriptSignal = function(u)
-        return "RBXScriptSignal --[[RBXScriptSignal's are not supported]]"
-    end,
-    RBXScriptConnection = function(u)
-        return "RBXScriptConnection --[[RBXScriptConnection's are not supported]]"
+        return `Enum.{u}`
     end,
     Vector3 = function(u)
-        return ("Vector3.new(%s)"):format(Safetostring(u))
+        return CustomGeneration.Vector3[u] or `Vector3.new({u})`
     end,
     Vector2 = function(u)
-        return ("Vector2.new(%s)"):format(Safetostring(u))
+        return CustomGeneration.Vector2[u] or `Vector2.new({u})`
     end,
     CFrame = function(u)
-        return ("CFrame.new(%s)"):format(Safetostring(u))
+        return CustomGeneration.CFrame[u] or `CFrame.new({table.concat({u:GetComponents()},", ")})`
     end,
     PathWaypoint = function(u)
-        return ("PathWaypoint.new(%s, %s)"):format(v2s(u.Position), v2s(u.Action), u.Label)
+        return `PathWaypoint.new({ufunctions["Vector3"](u.Position)}, {u.Action}, "{u.Label}")`
     end,
     UDim = function(u)
-        return ("UDim.new(%s)"):format(Safetostring(u))
+        return `UDim.new({u})`
     end,
     UDim2 = function(u)
-        return ("UDim2.new(%s"):format(Safetostring(u))
+        return `UDim2.new({u})`
     end,
     Rect = function(u)
-        return ("Rect.new(%s)"):format(Safetostring(u))
+        local Vector2tostring = ufunctions["Vector2"]
+        return `Rect.new({Vector2tostring(u.Min)}, {Vector2tostring(u.Max)})`
     end,
     Color3 = function(u)
-        return ("Color3.fromRGB(%s, %s, %s)"):format(u.r*255,u.g*255,u.b*255)
-    end
-}
-
-local number_table = {
-    ["inf"] = "math.huge",
-    ["-inf"] = "-math.huge",
-    ["nan"] = "0/0"
+        return `Color3.new({u.R}, {u.G}, {u.B})`
+    end,
+    RBXScriptSignal = function(u) -- The server doesnt recive this
+        return "RBXScriptSignal --[[RBXScriptSignal's are not supported]]"
+    end,
+    RBXScriptConnection = function(u) -- The server doesnt recive this
+        return "RBXScriptConnection --[[RBXScriptConnection's are not supported]]"
+    end,
 }
 
 local typeofv2sfunctions = {
     number = function(v)
-        local number = Safetostring(v)
+        local number = tostring(v)
         return number_table[number] or number
     end,
     boolean = function(v)
-        return Safetostring(v)
+        return tostring(v)
     end,
     string = function(v,l)
         return formatstr(v, l)
     end,
-    ["function"] = function(v)
+    ["function"] = function(v) -- The server doesnt recive this
         return f2s(v)
     end,
     table = function(v, l, p, n, vtv, i, pt, path, tables, tI)
         return t2s(v, l, p, n, vtv, i, pt, path, tables, tI)
     end,
     Instance = function(v)
-        local instance = cloneref(v)
-        return i2p(instance,generation[GetDebugId(instance)])
+        local DebugId = OldDebugId(v)
+        return i2p(v,generation[DebugId])
     end,
-    userdata = function(v)
+    userdata = function(v) -- The server doesnt recive this
         if configs.advancedinfo then
             if getrawmetatable(v) then
                 return "newproxy(true)"
@@ -1123,17 +1219,16 @@ local typev2sfunctions = {
         if ufunctions[vtypeof] then
             return ufunctions[vtypeof](v)
         end
-        return ("%s(%s) --[[Generation Failure]]"):format(vtypeof,Safetostring(v))
+        return `{vtypeof}({rawtostring(v)}) --[[Generation Failure]]`
     end,
-    vector = function(v)
-        return ("Vector3.new(%s)"):format(Safetostring(v))--string.format("Vector3.new(%s, %s, %s)", v2s(v.X), v2s(v.Y), v2s(v.Z))
-    end
+    vector = ufunctions["Vector3"]
 }
 
 
 function v2s(v, l, p, n, vtv, i, pt, path, tables, tI)
-    log(running())
     local vtypeof = typeof(v)
+    local vtypeoffunc = typeofv2sfunctions[vtypeof]
+    local vtypefunc = typev2sfunctions[type(v)]
     local vtype = type(v)
     if not tI then
         tI = {0}
@@ -1141,18 +1236,17 @@ function v2s(v, l, p, n, vtv, i, pt, path, tables, tI)
         tI[1] += 1
     end
 
-    if typeofv2sfunctions[vtypeof] then
-        return typeofv2sfunctions[vtypeof](v, l, p, n, vtv, i, pt, path, tables, tI)
-    elseif typev2sfunctions[vtype] then
-        return typev2sfunctions[vtype](v,vtypeof)
+    if vtypeoffunc then
+        return vtypeoffunc(v, l, p, n, vtv, i, pt, path, tables, tI)
+    elseif vtypefunc then
+        return vtypefunc(v,vtypeof)
     end
-    return ("%s(%s) --[[Generation Failure]]"):format(vtypeof,Safetostring(v))
+    return `{vtypeof}({rawtostring(v)}) --[[Generation Failure]]`
 end
 
 --- value-to-variable
 --- @param t any
 function v2v(t)
-    log(running())
     topstr = ""
     bottomstr = ""
     getnilrequired = false
@@ -1161,10 +1255,10 @@ function v2v(t)
     for i, v in next, t do
         if type(i) == "string" and i:match("^[%a_]+[%w_]*$") then
             ret = ret .. "local " .. i .. " = " .. v2s(v, nil, nil, i, true) .. "\n"
-        elseif Safetostring(i):match("^[%a_]+[%w_]*$") then
-            ret = ret .. "local " .. lower(Safetostring(i)) .. "_" .. Safetostring(count) .. " = " .. v2s(v, nil, nil, lower(Safetostring(i)) .. "_" .. Safetostring(count), true) .. "\n"
+        elseif rawtostring(i):match("^[%a_]+[%w_]*$") then
+            ret = ret .. "local " .. lower(rawtostring(i)) .. "_" .. rawtostring(count) .. " = " .. v2s(v, nil, nil, lower(rawtostring(i)) .. "_" .. rawtostring(count), true) .. "\n"
         else
-            ret = ret .. "local " .. type(v) .. "_" .. Safetostring(count) .. " = " .. v2s(v, nil, nil, type(v) .. "_" .. Safetostring(count), true) .. "\n"
+            ret = ret .. "local " .. type(v) .. "_" .. rawtostring(count) .. " = " .. v2s(v, nil, nil, type(v) .. "_" .. rawtostring(count), true) .. "\n"
         end
         count = count + 1
     end
@@ -1178,6 +1272,10 @@ function v2v(t)
         ret = ret .. bottomstr
     end
     return ret
+end
+
+function tabletostring(tbl: table,format: boolean)
+    
 end
 
 --- table-to-string
@@ -1211,14 +1309,14 @@ function t2s(t, l, p, n, vtv, i, pt, path, tables, tI)
     end
     for _, v in next, tables do -- checks if the current table has been serialized before
         if n and rawequal(v, t) then
-            bottomstr = bottomstr .. "\n" .. Safetostring(n) .. Safetostring(path) .. " = " .. Safetostring(n) .. Safetostring(({v2p(v, p)})[2])
+            bottomstr = bottomstr .. "\n" .. rawtostring(n) .. rawtostring(path) .. " = " .. rawtostring(n) .. rawtostring(({v2p(v, p)})[2])
             return "{} --[[DUPLICATE]]"
         end
     end
     table.insert(tables, t) -- logs table to past tables
     local s =  "{" -- start of serialization
     local size = 0
-    l = l + indent -- set indentation level
+    l += indent -- set indentation level
     for k, v in next, t do -- iterates over table
         size = size + 1 -- changes size for max limit
         if size > (getgenv().SimpleSpyMaxTableSize or 1000) then
@@ -1226,7 +1324,8 @@ function t2s(t, l, p, n, vtv, i, pt, path, tables, tI)
             break
         end
         if rawequal(k, t) then -- checks if the table being iterated over is being used as an index within itself (yay, lua)
-            bottomstr = bottomstr .. "\n" .. Safetostring(n) .. Safetostring(path) .. "[" .. Safetostring(n) .. Safetostring(path) .. "]" .. " = " .. (rawequal(v, k) and Safetostring(n) .. Safetostring(path) or v2s(v, l, p, n, vtv, k, t, path .. "[" .. Safetostring(n) .. Safetostring(path) .. "]", tables))
+            bottomstr ..= `\n{n}{path}[{n}{path}] = {(rawequal(v,k) and `{n}{path}` or v2s(v, l, p, n, vtv, k, t, `{path}[{n}{path}]`, tables))}`
+            --bottomstr = bottomstr .. "\n" .. rawtostring(n) .. rawtostring(path) .. "[" .. rawtostring(n) .. rawtostring(path) .. "]" .. " = " .. (rawequal(v, k) and rawtostring(n) .. rawtostring(path) or v2s(v, l, p, n, vtv, k, t, path .. "[" .. rawtostring(n) .. rawtostring(path) .. "]", tables))
             size -= 1
             continue
         end
@@ -1253,8 +1352,6 @@ end
 
 --- function-to-string
 function f2s(f)
-    --[[
-        No real point in having this
     for k, x in next, getgenv() do
         local isgucci, gpath
         if rawequal(x, f) then
@@ -1269,15 +1366,16 @@ function f2s(f)
                 return "getgenv()[" .. v2s(k) .. "]" .. gpath
             end
         end
-    end]]
+    end
+    
     if configs.funcEnabled then
         local funcname = info(f,"n")
         
         if funcname and funcname:match("^[%a_]+[%w_]*$") then
-            return ("function() %s end"):format(funcname)
+            return `function {funcname}() end -- Function Called: {funcname}`
         end
     end
-    return ("function() %s end"):format(Safetostring(f))
+    return tostring(f)
 end
 
 --- instance-to-path
@@ -1314,7 +1412,7 @@ function i2p(i,customgen)
             if parent and parent.Parent == game then
                 if SafeGetService(parent.ClassName) then
                     if lower(parent.ClassName) == "workspace" then
-                        return "workspace"..out
+                        return `workspace{out}`
                     else
                         return 'game:GetService("' .. parent.ClassName .. '")' .. out
                     end
@@ -1461,7 +1559,7 @@ function handlespecials(s, indentation)
             elseif byte(char) > 126 or byte(char) < 32 then
                 resume(c, i, "\\" .. byte(char))
                 -- s = s:sub(0, i - 1) .. "\\" .. byte(char) .. s:sub(i + 1, -1)
-                i += #Safetostring(byte(char))
+                i += #rawtostring(byte(char))
             end
             if i >= n * 100 then
                 local extra = string.format('" ..\n%s"', string.rep(" ", indentation + indent))
@@ -1571,64 +1669,87 @@ local function tablecheck(tabletocheck,instance,id)
     return tabletocheck[id] or tabletocheck[instance.Name]
 end
 
-function remoteHandler(methodName, remote, args, func, callingscript, metamethod, blocked, id)
-    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-        if configs.autoblock then
-            if excluding[id] then
-                return
-            end
-            if not history[id] then
-                history[id] = {badOccurances = 0, lastCall = tick()}
-            end
-            if tick() - history[id].lastCall < 1 then
-                history[id].badOccurances += 1
-                return
-            else
-                history[id].badOccurances = 0
-            end
-            if history[id].badOccurances > 3 then
-                excluding[id] = true
-                return
-            end
-            history[id].lastCall = tick()
+function remoteHandler(data)
+    if configs.autoblock then
+        local id = data.id
+
+        if excluding[id] then
+            return
         end
+        if not history[id] then
+            history[id] = {badOccurances = 0, lastCall = tick()}
+        end
+        if tick() - history[id].lastCall < 1 then
+            history[id].badOccurances += 1
+            return
+        else
+            history[id].badOccurances = 0
+        end
+        if history[id].badOccurances > 3 then
+            excluding[id] = true
+            return
+        end
+        history[id].lastCall = tick()
+    end
 
-        local functionInfoStr = func or "--Function Info is disabled"
-
-        newRemote(remote:IsA("RemoteEvent") and lower(methodName) == "fireserver" and "event" or "function", remote.Name, args, remote, functionInfoStr, blockcheck, callingscript, metamethod, func, id)
+    if data.remote:IsA("RemoteEvent") and lower(data.method) == "fireserver" then
+        newRemote("event", data)
+    elseif data.remote:IsA("RemoteFunction") and lower(data.method) == "invokeserver" then
+        newRemote("function", data)
     end
 end
 
-local function logreturnvalue(func,...)
-    local returndata = func(...)
-    return returndata
-end
-
 local newindex = function(method,originalfunction,...)
-    local remote = ...
-    if typeof(remote) == 'Instance' then
-        if not configs.logcheckcaller and checkcaller() then return originalfunction(...) end
+    if typeof(...) == 'Instance' then
+        local remote = cloneref(...)
 
-        if method == "FireServer" or method == "fireServer" or method == "InvokeServer" or method == "invokeServer" then
-            local old = get_thread_identity()
-            set_thread_identity(8)
-            remote = cloneref(remote)
-
-            local id = GetDebugId(remote)
+        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+            if not configs.logcheckcaller and checkcaller() then return originalfunction(...) end
+            local id = ThreadGetDebugId(remote)
             local blockcheck = tablecheck(blocklist,remote,id)
-            if not tablecheck(blacklist,remote,id) then
-                local args = {select(2,...)}
-                local infofunc
-                local callingscript
+            local args = {select(2,...)}
+
+            if not tablecheck(blacklist,remote,id) and not IsCyclicTable(args) then
+                local data = {
+                    method = method,
+                    remote = remote,
+                    args = deepclone(args),
+                    infofunc = infofunc,
+                    callingscript = callingscript,
+                    metamethod = "__index",
+                    blockcheck = blockcheck,
+                    id = id,
+                    returnvalue = {}
+                }
+                args = nil
 
                 if configs.funcEnabled then
-                    infofunc = info(getinfolevel,"f")
+                    data.infofunc = info(2,"f")
                     local calling = getcallingscript()
-                    callingscript = calling and cloneref(calling) or nil
+                    data.callingscript = calling and cloneref(calling) or nil
                 end
-                log(spawn(schedule,remoteHandler, method, remote, args, infofunc, callingscript, "__index",blockcheck,id))
-            end
-            set_thread_identity(old)
+
+                schedule(remoteHandler,data)
+
+                --[[if configs.logreturnvalues and remote:IsA("RemoteFunction") then
+                    local thread = running()
+                    local returnargs = {...}
+                    local returndata
+
+                    spawn(function()
+                        setnamecallmethod(method)
+                        returndata = originalnamecall(unpack(returnargs))
+                        data.returnvalue.data = returndata
+                        if ThreadIsNotDead(thread) then
+                            resume(thread)
+                        end
+                     end)
+                    yield()
+                    if not blockcheck then
+                        return returndata
+                    end
+                end]]
+                end
             if blockcheck then return end
         end
     end
@@ -1636,31 +1757,61 @@ local newindex = function(method,originalfunction,...)
 end
 
 local newnamecall = newcclosure(function(...)
-    local remote = ...
-    if typeof(remote) == 'Instance' then
-        if not configs.logcheckcaller and checkcaller() then return originalnamecall(...) end
-        local method = getnamecallmethod()
-        if method and (method == "FireServer" or method == "fireServer" or method == "InvokeServer" or method == "invokeServer") then
-            local old = get_thread_identity()
-            set_thread_identity(8)
-            remote = cloneref(remote)
-            
-            local id = GetDebugId(remote)
-            local blockcheck = tablecheck(blocklist,remote,id)
-            if not tablecheck(blacklist,remote,id) then
-                local args = {select(2,...)}
-                local infofunc
-                local callingscript
+    local method = getnamecallmethod()
 
-                if configs.funcEnabled then
-                    infofunc = info(getinfolevel,"f")
-                    local calling = getcallingscript()
-                    callingscript = calling and cloneref(calling) or nil
+    if method and (method == "FireServer" or method == "fireServer" or method == "InvokeServer" or method == "invokeServer") then
+        if typeof(...) == 'Instance' then
+            local remote = cloneref(...)
+
+            if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") then    
+                if not configs.logcheckcaller and checkcaller() then return originalnamecall(...) end
+                local id = ThreadGetDebugId(remote)
+                local blockcheck = tablecheck(blocklist,remote,id)
+                local args = {select(2,...)}
+
+                if not tablecheck(blacklist,remote,id) and not IsCyclicTable(args) then
+                    local data = {
+                        method = method,
+                        remote = remote,
+                        args = deepclone(args),
+                        infofunc = infofunc,
+                        callingscript = callingscript,
+                        metamethod = "__namecall",
+                        blockcheck = blockcheck,
+                        id = id,
+                        returnvalue = {}
+                    }
+                    args = nil
+
+                    if configs.funcEnabled then
+                        data.infofunc = info(2,"f")
+                        local calling = getcallingscript()
+                        data.callingscript = calling and cloneref(calling) or nil
+                    end
+
+                    schedule(remoteHandler,data)
+                    
+                    --[[if configs.logreturnvalues and remote.IsA(remote,"RemoteFunction") then
+                        local thread = running()
+                        local returnargs = {...}
+                        local returndata
+
+                        spawn(function()
+                            setnamecallmethod(method)
+                            returndata = originalnamecall(unpack(returnargs))
+                            data.returnvalue.data = returndata
+                            if ThreadIsNotDead(thread) then
+                                resume(thread)
+                            end
+                        end)
+                        yield()
+                        if not blockcheck then
+                            return returndata
+                        end
+                    end]]
                 end
-                log(spawn(schedule,remoteHandler, method, remote, args, infofunc, callingscript, "__namecall",blockcheck,id))
+                if blockcheck then return end
             end
-            set_thread_identity(old)
-            if blockcheck then return end
         end
     end
     return originalnamecall(...)
@@ -1733,7 +1884,9 @@ local function shutdown()
         connection:Disconnect()
     end
     for i,v in next, running_threads do
-        close(v)
+        if ThreadIsNotDead(v) then
+            close(v)
+        end
     end
     clear(running_threads)
     clear(connections)
@@ -1741,9 +1894,9 @@ local function shutdown()
     clear(remoteLogs)
     disablehooks()
     SimpleSpy3:Destroy()
+    Storage:Destroy()
     UserInputService.MouseIconEnabled = true
     getgenv().SimpleSpyExecuted = false
-    writefiletoggle = false
 end
 
 -- main
@@ -1758,8 +1911,8 @@ if not getgenv().SimpleSpyExecuted then
             ErrorPrompt("Simple Spy V3 will not function to it's fullest capablity due to your executor not supporting hookmetamethod.",true)
         end
         codebox = Highlight.new(CodeBox)
-        log(spawn(function()
-            local suc,err = pcall(game.HttpGet,game,"https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/update.txt")
+        logthread(spawn(function()
+            local suc,err = pcall(game.HttpGet,game,"https://raw.githubusercontent.com/78n/SimpleSpy/main/UpdateLog.lua")
             codebox:setRaw((suc and err) or "")
         end))
         getgenv().SimpleSpy = SimpleSpy
@@ -1791,28 +1944,27 @@ if not getgenv().SimpleSpyExecuted then
         table.insert(connections, UserInputService.InputBegan:Connect(backgroundUserInput))
         connectResize()
         SimpleSpy3.Enabled = true
-        log(spawn(function()
+        logthread(spawn(function()
             delay(1,onToggleButtonUnhover)
         end))
         schedulerconnect = RunService.Heartbeat:Connect(taskscheduler)
         bringBackOnResize()
         SimpleSpy3.Parent = (gethui and gethui()) or (syn and syn.protect_gui and syn.protect_gui(SimpleSpy3)) or CoreGui
-        log(spawn(function()
+        logthread(spawn(function()
             local lp = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait() or Players.LocalPlayer
             generation = {
-                [GetDebugId(lp)] = 'game:GetService("Players").LocalPlayer',
-                [GetDebugId(lp:GetMouse())] = 'game:GetService("Players").LocalPlayer:GetMouse',
-                [GetDebugId(game)] = "game",
-                [GetDebugId(workspace)] = "workspace"
+                [OldDebugId(lp)] = 'game:GetService("Players").LocalPlayer',
+                [OldDebugId(lp:GetMouse())] = 'game:GetService("Players").LocalPlayer:GetMouse',
+                [OldDebugId(game)] = "game",
+                [OldDebugId(workspace)] = "workspace"
             }
         end))
     end)
     if succeeded then
         getgenv().SimpleSpyExecuted = true
-        writefiletoggle = true
     else
         shutdown()
-        ErrorPrompt("An error has occured:\n"..Safetostring(err))
+        ErrorPrompt("An error has occured:\n"..rawtostring(err))
         return
     end
 else
@@ -1914,7 +2066,7 @@ function()
     local func = selected and selected.Function
     if func then
         local typeoffunc = typeof(func)
-        getgenv().func = func
+
         if typeoffunc ~= 'string' then
             codebox:setRaw("--[[Generating Function Info please wait]]")
             RunService.Heartbeat:Wait()
@@ -1922,7 +2074,7 @@ function()
             local SourceScript = rawget(getfenv(func),"script")
             local CallingScript = selected.Source or nil
             local info = {}
-
+            
             info = {
                 info = getinfo(func),
                 constants = lclosure and deepclone(getconstants(func)) or "N/A --Lua Closure expected got C Closure",
@@ -1939,9 +2091,9 @@ function()
                 info["advancedinfo"] = {
                     Metamethod = selected.metamethod,
                     DebugId = {
-                        SourceScriptDebugId = SourceScript and typeof(SourceScript) == "Instance" and GetDebugId(SourceScript) or "N/A",
-                        CallingScriptDebugId = CallingScript and typeof(SourceScript) == "Instance" and GetDebugId(CallingScript) or "N/A",
-                        RemoteDebugId = GetDebugId(Remote)
+                        SourceScriptDebugId = SourceScript and typeof(SourceScript) == "Instance" and OldDebugId(SourceScript) or "N/A",
+                        CallingScriptDebugId = CallingScript and typeof(SourceScript) == "Instance" and OldDebugId(CallingScript) or "N/A",
+                        RemoteDebugId = OldDebugId(Remote)
                     },
                     Protos = lclosure and getprotos(func) or "N/A --Lua Closure expected got C Closure"
                 }
@@ -1993,7 +2145,7 @@ newButton(
     function() return "Click to exclude this Remote.\nExcluding a remote makes SimpleSpy ignore it, but it will continue to be usable." end,
     function()
         if selected then
-            blacklist[GetDebugId(selected.Remote)] = true
+            blacklist[OldDebugId(selected.Remote)] = true
             TextLabel.Text = "Excluded!"
         end
     end
@@ -2025,7 +2177,7 @@ newButton(
     function() return "Click to stop this remote from firing.\nBlocking a remote won't remove it from SimpleSpy logs, but it will not continue to fire the server." end,
     function()
         if selected then
-            blocklist[GetDebugId(selected.Remote)] = true
+            blocklist[OldDebugId(selected.Remote)] = true
             TextLabel.Text = "Excluded!"
         end
     end
@@ -2054,29 +2206,53 @@ newButton(
 
 --- Attempts to decompile the source script
 newButton("Decompile",
-    function() return "Decompile source script" end,
     function()
-        if selected and selected.Source then
-            local Source = selected.Source
-            if not DecompiledScripts[Source] then
-                codebox:setRaw("--[[Decompiling]]")
+        return "Decompile source script"
+    end,function()
+        if decompile then
+            if selected and selected.Source then
+                local Source = selected.Source
+                if not DecompiledScripts[Source] then
+                    codebox:setRaw("--[[Decompiling]]")
 
-                xpcall(function()
-                    local decompiledsource = decompile(Source):gsub("-- Decompiled with the Synapse X Luau decompiler.","")
-                    local Sourcev2s = v2s(Source)
-                    if (decompiledsource):find("script") and Sourcev2s then
-                        DecompiledScripts[Source] = ("local script = %s\n%s"):format(Sourcev2s,decompiledsource)
-                    end
-                end,function(err)
-                    return codebox:setRaw(("--[[\nAn error has occured\n%s\n]]"):format(err))
-                end)
+                    xpcall(function()
+                        local decompiledsource = decompile(Source):gsub("-- Decompiled with the Synapse X Luau decompiler.","")
+                        local Sourcev2s = v2s(Source)
+                        if (decompiledsource):find("script") and Sourcev2s then
+                            DecompiledScripts[Source] = ("local script = %s\n%s"):format(Sourcev2s,decompiledsource)
+                        end
+                    end,function(err)
+                        return codebox:setRaw(("--[[\nAn error has occured\n%s\n]]"):format(err))
+                    end)
+                end
+                codebox:setRaw(DecompiledScripts[Source] or "--No Source Found")
+                TextLabel.Text = "Done!"
+            else
+                TextLabel.Text = "Source not found!"
             end
-            codebox:setRaw(DecompiledScripts[Source] or "--No Source Found")
-            TextLabel.Text = "Done!"
         else
-            TextLabel.Text = "Source not found!"
+            TextLabel.Text = "Missing function (decompile)"
         end
-    end)
+    end
+)
+
+    --[[newButton(
+        "returnvalue",
+        function() return "Get a Remote's return data" end,
+        function()
+            if selected then
+                local Remote = selected.Remote
+                if Remote and Remote:IsA("RemoteFunction") then
+                    if selected.returnvalue and selected.returnvalue.data then
+                        return codebox:setRaw(v2s(selected.returnvalue.data))
+                    end
+                    return codebox:setRaw("No data was returned")
+                else
+                    codebox:setRaw("RemoteFunction expected got "..(Remote and Remote.ClassName))
+                end
+            end
+        end
+    )]]
 
 newButton(
     "Disable Info",
@@ -2106,6 +2282,14 @@ function()
     TextLabel.Text = ("[%s] Log remotes fired by the client"):format(configs.logcheckcaller and "ENABLED" or "DISABLED")
 end)
 
+--[[newButton("Log returnvalues",function()
+    return ("[BETA] [%s] Log RemoteFunction's return values"):format(configs.logcheckcaller and "ENABLED" or "DISABLED")
+end,
+function()
+    configs.logreturnvalues = not configs.logreturnvalues
+    TextLabel.Text = ("[BETA] [%s] Log RemoteFunction's return values"):format(configs.logreturnvalues and "ENABLED" or "DISABLED")
+end)]]
+
 newButton("Advanced Info",function()
     return ("[%s] Display more remoteinfo"):format(configs.advancedinfo and "ENABLED" or "DISABLED")
 end,
@@ -2114,7 +2298,6 @@ function()
     TextLabel.Text = ("[%s] Display more remoteinfo"):format(configs.advancedinfo and "ENABLED" or "DISABLED")
 end)
 
-if syn and syn.request then request = syn.request end
 newButton("Join Discord",function()
     return "Joins The Simple Spy Discord"
 end,
@@ -2137,7 +2320,7 @@ if configs.supersecretdevtoggle then
         return "Load's Simple Spy V3"
     end,
     function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/main.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpySource.lua"))()
     end)
     local SuperSecretFolder = Create("Folder",{Parent = SimpleSpy3})
     newButton("SUPER SECRET BUTTON",function()
@@ -2150,3 +2333,4 @@ if configs.supersecretdevtoggle then
         NotSound:Play()
     end)
 end
+

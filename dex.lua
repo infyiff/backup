@@ -7,13 +7,6 @@
 	Modified for Infinite Yield
 	
 	Dex is a debugging suite designed to help the user debug games and find any potential vulnerabilities.
-	
-	This is the final version of this script.
-	You are encouraged to edit, fork, do whatever with this. I pretty much won't be updating it anymore.
-	Though I would appreciate it if you kept the credits in the script if you enjoy this hard work.
-	
-	If you want more info, you can join the server: https://discord.io/zinnia
-	Note that very limited to no support will be provided.
 ]]
 
 local nodes = {}

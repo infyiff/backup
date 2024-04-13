@@ -4236,7 +4236,7 @@ local function main()
 
 		copy.MouseButton1Click:Connect(function()
 			local source = codeFrame:GetText()
-			setclipboard(source)
+			env.setclipboard(source)
 		end)
 
 		local save = Instance.new("TextButton",window.GuiElems.Content)
@@ -4250,9 +4250,9 @@ local function main()
 			local source = codeFrame:GetText()
 			local filename = "Place_"..game.PlaceId.."_Script_"..os.time()..".txt"
 
-			writefile(filename,source)
-			if movefileas then -- TODO: USE ENV
-				movefileas(filename,".txt")
+			env.writefile(filename, source)
+			if env.movefileas then
+				env.movefileas(filename, ".txt")
 			end
 		end)
 
@@ -4776,12 +4776,16 @@ local function main()
 
 	Lib.ProtectedGuis = {}
 
-	Lib.ShowGui = function(gui)
-		if env.protectgui then
-			env.protectgui(gui)
-		end
-		gui.Parent = Main.GuiHolder
-	end
+    Lib.ShowGui = function(gui)
+        if env.gethui then
+            gui.Parent = env.gethui()
+        elseif env.protectgui then
+            env.protectgui(gui)
+            gui.Parent = Main.GuiHolder
+        else
+            gui.Parent = Main.GuiHolder
+        end
+    end
 
 	Lib.ColorToBytes = function(col)
 		local round = math.round
@@ -10320,7 +10324,7 @@ Main = (function()
 			end
 		end
 	end
-	
+
     Main.InitEnv = function()
         setmetatable(env, {__newindex = function(self, name, func)
             if not func then Main.MissingEnv[#Main.MissingEnv + 1] = name return end
@@ -10334,11 +10338,13 @@ Main = (function()
         env.makefolder = makefolder
         env.listfiles = listfiles
         env.loadfile = loadfile
+        env.movefileas = movefileas
         env.saveinstance = saveinstance
 
         -- debug
         env.getupvalues = (debug and debug.getupvalues) or getupvalues or getupvals
         env.getconstants = (debug and debug.getconstants) or getconstants or getconsts
+        env.getinfo = (debug and (debug.getinfo or debug.info)) or getinfo
         env.islclosure = islclosure or is_l_closure or is_lclosure
         env.checkcaller = checkcaller
         --env.getreg = getreg
@@ -10380,13 +10386,14 @@ Main = (function()
         env.getnilinstances = getnilinstances or get_nil_instances
         env.getloadedmodules = getloadedmodules
 
-        --if identifyexecutor and type(identifyexecutor) == "function" then Main.Executor = identifyexecutor() end
+        -- if identifyexecutor and type(identifyexecutor) == "function" then Main.Executor = identifyexecutor() end
 
-        Main.GuiHolder = Main.Elevated and service.CoreGui or plr:FindFirstChildWhichIsA("PlayerGui")
+        -- Main.GuiHolder = Main.Elevated and service.CoreGui or plr:FindFirstChildWhichIsA("PlayerGui")
+        Main.GuiHolder = service.CoreGui
 
         setmetatable(env, nil)
     end
-	
+
 	Main.LoadSettings = function()
 		local s,data = pcall(env.readfile or error,"DexSettings.json")
 		if s and data and data ~= "" then
@@ -10682,12 +10689,13 @@ Main = (function()
 		
 		return {Classes = classes, Enums = enums, PropertyOrders = propertyOrders}
 	end
-	
+
     Main.ShowGui = function(gui)
-        if env.protectgui then
-            env.protectgui(gui)
-        elseif env.gethui then
+        if env.gethui then
             gui.Parent = env.gethui()
+        elseif env.protectgui then
+            env.protectgui(gui)
+            gui.Parent = Main.GuiHolder
         else
             gui.Parent = Main.GuiHolder
         end

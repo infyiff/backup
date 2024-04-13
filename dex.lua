@@ -10343,13 +10343,14 @@ Main = (function()
         env.checkcaller = checkcaller
         --env.getreg = getreg
         env.getgc = getgc or get_gc_objects
+        env.base64encode = crypt and crypt.base64 and crypt.base64.encode
+        env.getscriptbytecode = getscriptbytecode
 
         -- other
         --env.setfflag = setfflag
         env.request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-        env.base64encode = crypt and crypt.base64 and crypt.base64.encode
-        env.decompile = decompile or (getscriptbytecode and env.request and env.base64encode and function(scr)
-            local s, bytecode = pcall(getscriptbytecode, scr)
+        env.decompile = decompile or (env.getscriptbytecode and env.request and env.base64encode and function(scr)
+            local s, bytecode = pcall(env.getscriptbytecode, scr)
             if not s then
                 return "failed to get bytecode " .. tostring(bytecode)
             end

@@ -11,7 +11,7 @@
 
 local nodes = {}
 local selection
-local clonerefs = cloneref or function(...) return ... end
+local cloneref = cloneref or function(...) return ... end
 
 local EmbeddedModules = {
 Explorer = function()
@@ -582,14 +582,14 @@ local function main()
 				local listOffsetX = startX - treeFrame.AbsolutePosition.X
 				local listOffsetY = startY - treeFrame.AbsolutePosition.Y
 
-				releaseEvent = clonerefs(game:GetService("UserInputService")).InputEnded:Connect(function(input)
+				releaseEvent = cloneref(game:GetService("UserInputService")).InputEnded:Connect(function(input)
 					if input.UserInputType == Enum.UserInputType.MouseButton1 then
 						releaseEvent:Disconnect()
 						mouseEvent:Disconnect()
 					end
 				end)
 
-				mouseEvent = clonerefs(game:GetService("UserInputService")).InputChanged:Connect(function(input)
+				mouseEvent = cloneref(game:GetService("UserInputService")).InputChanged:Connect(function(input)
 					if input.UserInputType == Enum.UserInputType.MouseMovement then
 						local deltaX = mouse.X - startX
 						local deltaY = mouse.Y - startY
@@ -5625,7 +5625,7 @@ local function main()
 
 					guiDragging = true
 
-					releaseEvent = clonerefs(game:GetService("UserInputService")).InputEnded:Connect(function(input)
+					releaseEvent = cloneref(game:GetService("UserInputService")).InputEnded:Connect(function(input)
 						if input.UserInputType == Enum.UserInputType.MouseButton1 then
 							releaseEvent:Disconnect()
 							mouseEvent:Disconnect()
@@ -5638,7 +5638,7 @@ local function main()
 						end
 					end)
 
-					mouseEvent = clonerefs(game:GetService("UserInputService")).InputChanged:Connect(function(input)
+					mouseEvent = cloneref(game:GetService("UserInputService")).InputChanged:Connect(function(input)
 						if input.UserInputType == Enum.UserInputType.MouseMovement and self.Draggable and not self.Closed then
 							if self.Aligned then
 								if leftSide.Resizing or rightSide.Resizing then return end
@@ -7015,7 +7015,7 @@ local function main()
 						end
 					end)
 
-					scrollEvent = clonerefs(game:GetService("RunService")).RenderStepped:Connect(function()
+					scrollEvent = cloneref(game:GetService("RunService")).RenderStepped:Connect(function()
 						if scrollPowerV ~= 0 or scrollPowerH ~= 0 then
 							obj:ScrollDelta(scrollPowerH,scrollPowerV)
 							updateSelection()
@@ -8577,8 +8577,8 @@ local function main()
 			local greenInput = pickerFrame.Green.Input
 			local blueInput = pickerFrame.Blue.Input
 
-			local user = clonerefs(game:GetService("UserInputService"))
-			local mouse = clonerefs(game:GetService("Players")).LocalPlayer:GetMouse()
+			local user = cloneref(game:GetService("UserInputService"))
+			local mouse = cloneref(game:GetService("Players")).LocalPlayer:GetMouse()
 
 			local hue,sat,val = 0,0,1
 			local red,green,blue = 1,1,1
@@ -8961,8 +8961,8 @@ local function main()
 			local currentPoint = nil
 			local resetSequence = nil
 
-			local user = clonerefs(game:GetService("UserInputService"))
-			local mouse = clonerefs(game:GetService("Players")).LocalPlayer:GetMouse()
+			local user = cloneref(game:GetService("UserInputService"))
+			local mouse = cloneref(game:GetService("Players")).LocalPlayer:GetMouse()
 
 			for i = 2,10 do
 				local newLine = Instance.new("Frame")
@@ -9436,8 +9436,8 @@ local function main()
 			local closeButton = pickerFrame.Close
 			local topClose = pickerTopBar.Close
 
-			local user = clonerefs(game:GetService("UserInputService"))
-			local mouse = clonerefs(game:GetService("Players")).LocalPlayer:GetMouse()
+			local user = cloneref(game:GetService("UserInputService"))
+			local mouse = cloneref(game:GetService("Players")).LocalPlayer:GetMouse()
 
 			local colors = {{Color3.new(1,0,1),0},{Color3.new(0.2,0.9,0.2),0.2},{Color3.new(0.4,0.5,0.9),0.7},{Color3.new(0.6,1,1),1}}
 			local resetSequence = nil
@@ -9703,7 +9703,7 @@ local function main()
 	end)()
 
 	Lib.ViewportTextBox = (function()
-		local textService = clonerefs(game:GetService("TextService"))
+		local textService = cloneref(game:GetService("TextService"))
 
 		local props = {
 			OffsetX = 0,
@@ -10186,7 +10186,7 @@ local Settings = {}
 local Apps = {}
 local env = {}
 local service = setmetatable({},{__index = function(self,name)
-	local serv = clonerefs(game:GetService(name))
+	local serv = cloneref(game:GetService(name))
 	self[name] = serv
 	return serv
 end})
@@ -10321,44 +10321,70 @@ Main = (function()
 		end
 	end
 	
-	Main.InitEnv = function()
-		setmetatable(env, {__newindex = function(self, name, func)
-			if not func then Main.MissingEnv[#Main.MissingEnv + 1] = name return end
-			rawset(self, name, func)
-		end})
-		
-		-- file
-		env.readfile = readfile
-		env.writefile = writefile
-		env.appendfile = appendfile
-		env.makefolder = makefolder
-		env.listfiles = listfiles
-		env.loadfile = loadfile
-		env.saveinstance = saveinstance
-		
-		-- debug
-		env.getupvalues = debug.getupvalues or getupvals
-		env.getconstants = debug.getconstants or getconsts
-		env.islclosure = islclosure or is_l_closure
-		env.checkcaller = checkcaller
-		env.getreg = getreg
-		env.getgc = getgc
-		
-		-- other
-		env.setfflag = setfflag
-		env.decompile = decompile
-		env.protectgui = protect_gui or (syn and syn.protect_gui)
-		env.gethui = gethui
-		env.setclipboard = setclipboard
-		env.getnilinstances = getnilinstances or get_nil_instances
-		env.getloadedmodules = getloadedmodules
-		
-		if identifyexecutor then Main.Executor = identifyexecutor() end
-		
-		Main.GuiHolder = Main.Elevated and service.CoreGui or plr:FindFirstChildOfClass("PlayerGui")
-		
-		setmetatable(env, nil)
-	end
+    Main.InitEnv = function()
+        setmetatable(env, {__newindex = function(self, name, func)
+            if not func then Main.MissingEnv[#Main.MissingEnv + 1] = name return end
+            rawset(self, name, func)
+        end})
+
+        -- file
+        env.readfile = readfile
+        env.writefile = writefile
+        env.appendfile = appendfile
+        env.makefolder = makefolder
+        env.listfiles = listfiles
+        env.loadfile = loadfile
+        env.saveinstance = saveinstance
+
+        -- debug
+        env.getupvalues = (debug and debug.getupvalues) or getupvalues or getupvals
+        env.getconstants = (debug and debug.getconstants) or getconstants or getconsts
+        env.islclosure = islclosure or is_l_closure or is_lclosure
+        env.checkcaller = checkcaller
+        --env.getreg = getreg
+        env.getgc = getgc or get_gc_objects
+
+        -- other
+        --env.setfflag = setfflag
+        env.request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+        env.base64encode = crypt and crypt.base64 and crypt.base64.encode
+        env.decompile = decompile or (getscriptbytecode and env.request and env.base64encode and function(scr)
+            local s, bytecode = pcall(getscriptbytecode, scr)
+            if not s then
+                return "failed to get bytecode " .. tostring(bytecode)
+            end
+
+            local response = env.request({
+                Url = "https://unluau.lonegladiator.dev/unluau/decompile",
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = service.HttpService:JSONEncode({
+                    version = 5,
+                    bytecode = env.base64encode(bytecode)
+                })
+            })
+
+            local decoded = service.HttpService:JSONDecode(response.Body)
+            if decoded.status ~= "ok" then
+                return "decompilation failed: " .. tostring(decoded.status)
+            end
+
+            return decoded.output
+        end)
+        env.protectgui = protect_gui or (syn and syn.protect_gui)
+        env.gethui = gethui or get_hidden_gui
+        env.setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
+        env.getnilinstances = getnilinstances or get_nil_instances
+        env.getloadedmodules = getloadedmodules
+
+        --if identifyexecutor and type(identifyexecutor) == "function" then Main.Executor = identifyexecutor() end
+
+        Main.GuiHolder = Main.Elevated and service.CoreGui or plr:FindFirstChildWhichIsA("PlayerGui")
+
+        setmetatable(env, nil)
+    end
 	
 	Main.LoadSettings = function()
 		local s,data = pcall(env.readfile or error,"DexSettings.json")
@@ -10656,13 +10682,16 @@ Main = (function()
 		return {Classes = classes, Enums = enums, PropertyOrders = propertyOrders}
 	end
 	
-	Main.ShowGui = function(gui)
-		if env.protectgui then
-			env.protectgui(gui)
-		end
-		gui.Parent = Main.GuiHolder
-	end
-	
+    Main.ShowGui = function(gui)
+        if env.protectgui then
+            env.protectgui(gui)
+        elseif env.gethui then
+            gui.Parent = env.gethui()
+        else
+            gui.Parent = Main.GuiHolder
+        end
+    end
+
 	Main.CreateIntro = function(initStatus) -- TODO: Must theme and show errors
 		local gui = create({
 			{1,"ScreenGui",{Name="Intro",}},
@@ -11020,7 +11049,7 @@ Main = (function()
 	end
 	
 	Main.Init = function()
-		Main.Elevated = pcall(function() local a = clonerefs(game:GetService("CoreGui")):GetFullName() end)
+		Main.Elevated = pcall(function() local a = cloneref(game:GetService("CoreGui")):GetFullName() end)
 		Main.InitEnv()
 		Main.LoadSettings()
 		Main.SetupFilesystem()

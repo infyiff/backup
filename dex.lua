@@ -4212,6 +4212,7 @@ local function main()
 	ScriptViewer.ViewScript = function(scr)
 		local success, source = pcall(env.decompile or function() end, scr)
 		if not success or not source then source, PreviousScr = "-- DEX - Source failed to decompile", nil else PreviousScr = scr end
+		source = source:gsub("\0", "\\0") -- Fix stupid \0 breaking script viewer
 		codeFrame:SetText(source)
 		window:Show()
 	end

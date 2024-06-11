@@ -1,5 +1,6 @@
 -- https://v3rmillion.net/showthread.php?tid=1198556
 -- https://github.com/78n/SimpleSpy
+-- https://e-z.bio/swim
 
 if getgenv().SimpleSpyExecuted and type(getgenv().SimpleSpyShutdown) == "function" then
     getgenv().SimpleSpyShutdown()

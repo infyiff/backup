@@ -898,7 +898,7 @@ local function main()
 		if presentClasses["ProximityPrompt"] then context:AddRegistered("FIRE_PROXIMITYPROMPT", fireproximityprompt == nil) end
 		if presentClasses["Player"] then context:AddRegistered("SELECT_CHARACTER") end
 		if presentClasses["Players"] then context:AddRegistered("SELECT_LOCAL_PLAYER") end
-		if presentClasses["LuaSourceContainer"] then context:AddRegistered("VIEW_SCRIPT") end
+		if presentClasses["LuaSourceContainer"] then context:AddRegistered("VIEW_SCRIPT") context:AddRegistered("VIEW_SCRIPT_ORACLE") end
 
 		if sMap[nilNode] then
 			context:AddRegistered("REFRESH_NIL")
@@ -1272,12 +1272,12 @@ local function main()
 			for _, v in ipairs(selection.List) do if v.Obj and v.Obj:IsA("ProximityPrompt") then fireproximityprompt(v.Obj) end end
 		end})
 
-		context:Register("VIEW_SCRIPT_ORACLE",{Name = "View Script", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
+		context:Register("VIEW_SCRIPT",{Name = "View Script", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
 			local scr = selection.List[1] and selection.List[1].Obj
 			if scr then ScriptViewer.ViewScript(scr) end
 		end})
 
-		context:Register("VIEW_SCRIPT",{Name = "View Script (Oracle)", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
+		context:Register("VIEW_SCRIPT_ORACLE",{Name = "View Script (Oracle)", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
 			local scr = selection.List[1] and selection.List[1].Obj
 			if scr then ScriptViewer.ViewScriptOracle(scr) end
 		end})

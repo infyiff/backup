@@ -1272,9 +1272,14 @@ local function main()
 			for _, v in ipairs(selection.List) do if v.Obj and v.Obj:IsA("ProximityPrompt") then fireproximityprompt(v.Obj) end end
 		end})
 
-		context:Register("VIEW_SCRIPT",{Name = "View Script", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
+		context:Register("VIEW_SCRIPT_ORACLE",{Name = "View Script", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
 			local scr = selection.List[1] and selection.List[1].Obj
 			if scr then ScriptViewer.ViewScript(scr) end
+		end})
+
+		context:Register("VIEW_SCRIPT",{Name = "View Script (Oracle)", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
+			local scr = selection.List[1] and selection.List[1].Obj
+			if scr then ScriptViewer.ViewScriptOracle(scr) end
 		end})
 
 		context:Register("SELECT_CHARACTER",{Name = "Select Character", IconMap = Explorer.ClassIcons, Icon = 9, OnClick = function()
@@ -4211,6 +4216,13 @@ local function main()
 
 	ScriptViewer.ViewScript = function(scr)
 		local success, source = pcall(env.decompile or function() end, scr)
+		if not success or not source then source, PreviousScr = "-- DEX - Source failed to decompile", nil else PreviousScr = scr end
+		codeFrame:SetText(source:gsub("\0", "\\0")) -- Fix stupid breaking script viewer
+		window:Show()
+	end
+
+	ScriptViewer.ViewScriptOracle = function(scr)
+		local success, source = pcall(env.odecompile or function() end, scr)
 		if not success or not source then source, PreviousScr = "-- DEX - Source failed to decompile", nil else PreviousScr = scr end
 		codeFrame:SetText(source:gsub("\0", "\\0")) -- Fix stupid breaking script viewer
 		window:Show()

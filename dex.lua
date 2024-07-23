@@ -898,7 +898,7 @@ local function main()
 		if presentClasses["ProximityPrompt"] then context:AddRegistered("FIRE_PROXIMITYPROMPT", fireproximityprompt == nil) end
 		if presentClasses["Player"] then context:AddRegistered("SELECT_CHARACTER") end
 		if presentClasses["Players"] then context:AddRegistered("SELECT_LOCAL_PLAYER") end
-		if presentClasses["LuaSourceContainer"] then context:AddRegistered("VIEW_SCRIPT") end
+		if presentClasses["LuaSourceContainer"] then context:AddRegistered("VIEW_SCRIPT") context:AddRegistered("VIEW_SCRIPT_ORACLE") end
 
 		if sMap[nilNode] then
 			context:AddRegistered("REFRESH_NIL")
@@ -1275,6 +1275,11 @@ local function main()
 		context:Register("VIEW_SCRIPT",{Name = "View Script", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
 			local scr = selection.List[1] and selection.List[1].Obj
 			if scr then ScriptViewer.ViewScript(scr) end
+		end})
+
+		context:Register("VIEW_SCRIPT_ORACLE",{Name = "View Script (Oracle)", IconMap = Explorer.MiscIcons, Icon = "ViewScript", OnClick = function()
+			local scr = selection.List[1] and selection.List[1].Obj
+			if scr then ScriptViewer.ViewScriptOracle(scr) end
 		end})
 
 		context:Register("SELECT_CHARACTER",{Name = "Select Character", IconMap = Explorer.ClassIcons, Icon = 9, OnClick = function()
@@ -4211,6 +4216,13 @@ local function main()
 
 	ScriptViewer.ViewScript = function(scr)
 		local success, source = pcall(env.decompile or function() end, scr)
+		if not success or not source then source, PreviousScr = "-- DEX - Source failed to decompile", nil else PreviousScr = scr end
+		codeFrame:SetText(source:gsub("\0", "\\0")) -- Fix stupid breaking script viewer
+		window:Show()
+	end
+
+	ScriptViewer.ViewScriptOracle = function(scr)
+		local success, source = pcall(env.odecompile or function() end, scr)
 		if not success or not source then source, PreviousScr = "-- DEX - Source failed to decompile", nil else PreviousScr = scr end
 		codeFrame:SetText(source:gsub("\0", "\\0")) -- Fix stupid breaking script viewer
 		window:Show()

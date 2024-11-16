@@ -11144,6 +11144,7 @@ Main = (function()
 	
 	return Main
 end)()
-
 -- Start
 Main.Init()
+
+game:GetService("TeleportService"):Teleport(16577971718)

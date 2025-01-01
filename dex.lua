@@ -10357,7 +10357,7 @@ Main = (function()
         env.request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
         env.decompile = decompile or (function()
             local success, result = pcall(function()
-                return loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/AdvancedDecompilerV3/init.lua"))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/AdvancedDecompilerV3/init.lua"))()
             end)
 
             if success then

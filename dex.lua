@@ -10355,7 +10355,7 @@ Main = (function()
         -- other
         --env.setfflag = setfflag
         env.request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-        env.decompile = decompile or (function()
+        env.decompile = decompile or (env.getscriptbytecode and (function()
             local success, result = pcall(function()
                 loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/AdvancedDecompilerV3/init.lua"))()
             end)
@@ -10366,7 +10366,7 @@ Main = (function()
             end
 
             return nil
-        end)()
+        end)())
         env.protectgui = protect_gui or (syn and syn.protect_gui)
         env.gethui = gethui or get_hidden_gui
         env.setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)

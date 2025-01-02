@@ -15,7 +15,8 @@ local MemeStrings = {
 }
 
 local Strings = {
-	SUCCESS = "--" .. MemeStrings[math.random(#MemeStrings)] .. "\n%s",
+	-- SUCCESS = "--" .. MemeStrings[math.random(#MemeStrings)] .. "\n%s",
+	SUCCESS = "-- DECOMPILED BY ADVANCED DECOMPILER V3\n%s",
 	TIMEOUT = "-- DECOMPILER TIMEOUT",
 	COMPILATION_FAILURE = "-- SCRIPT FAILED TO COMPILE, ERROR:\n%s",
 	UNSUPPORTED_LBC_VERSION = "-- PASSED BYTECODE IS TOO OLD AND IS NOT SUPPORTED",

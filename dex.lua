@@ -10658,7 +10658,7 @@ Main = (function()
 		env.request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
         env.decompile = decompile or (env.getscriptbytecode and (function()
             local success, err = pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/AdvancedDecompilerV3/init.lua"))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/konstant.lua"))()
             end)
 
             return (success and decompile) or nil

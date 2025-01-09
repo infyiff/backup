@@ -7148,7 +7148,7 @@ local EmbeddedModules = {
 					["&"] = "&amp;"
 				}
 
-				local tabSub = "\205"
+				local tabSub = "\t"
 				local tabReplacement = (" %s%s "):format(tabSub,tabSub)
 
 				local tabJumps = {

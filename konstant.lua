@@ -1,3 +1,5 @@
+-- by lovrewe
+
 assert(getscriptbytecode, "Exploit not supported.")
 
 local API = "http://api.plusgiant5.com"
@@ -30,7 +32,7 @@ local function call(konstantType, scriptPath)
 	last_call = os.clock()
 
 	if (httpResult.StatusCode ~= 200) then
-		return `-- Error occured while requesting the API, error:\n\n--[[\n{httpResult.Body}\n--]]`
+		return `-- Error occured while requesting Konstant API, error:\n\n--[[\n{httpResult.Body}\n--]]`
 	else
 		return httpResult.Body
 	end
@@ -46,5 +48,3 @@ end
 
 getgenv().decompile = decompile
 getgenv().disassemble = disassemble
-
--- by lovrewe

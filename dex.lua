@@ -14,10 +14,10 @@ local selection
 local cloneref = cloneref or function(...) return ... end
 
 local service = setmetatable({}, {
-    __index = function(self, name)
-        self[name] = cloneref(game:GetService(name))
-        return self[name]
-    end
+	__index = function(self, name)
+		self[name] = cloneref(game:GetService(name))
+		return self[name]
+	end
 })
 
 local EmbeddedModules = {
@@ -1297,7 +1297,7 @@ local EmbeddedModules = {
 					end
 				end})
 
-                -- this code is very bad but im lazy and it works so cope
+				-- this code is very bad but im lazy and it works so cope
 				local clth = function(str)
 					if str:sub(1, 28) == "game:GetService(\"Workspace\")" then str = str:gsub("game:GetService%(\"Workspace\"%)", "workspace", 1) end
 					if str:sub(1, 27 + #plr.Name) == "game:GetService(\"Players\")." .. plr.Name then str = str:gsub("game:GetService%(\"Players\"%)." .. plr.Name, "game:GetService(\"Players\").LocalPlayer", 1) end
@@ -7149,13 +7149,13 @@ local EmbeddedModules = {
 				}
 
 				local tabSub = "\t"
-				local tabReplacement = (" %s%s "):format(tabSub,tabSub)
+				local tabReplacement = (" %s "):format(tabSub)
 
 				local tabJumps = {
-					[("[^%s] %s"):format(tabSub,tabSub)] = 0,
-					[(" %s%s"):format(tabSub,tabSub)] = -1,
-					[("%s%s "):format(tabSub,tabSub)] = 2,
-					[("%s [^%s]"):format(tabSub,tabSub)] = 1,
+					[("[^%s] "):format(tabSub)] = 0,
+					[(" %s"):format(tabSub)] = -1,
+					[("%s "):format(tabSub)] = 2,
+					[(" [^%s]"):format(tabSub)] = 1,
 				}
 
 				local tweenService = service.TweenService
@@ -10638,9 +10638,9 @@ Main = (function()
 		env.loadfile = loadfile
 		env.movefileas = movefileas
 		env.saveinstance = saveinstance
-        env.parsefile = function(name)
-            return tostring(name):gsub("[*\\?:<>|]+", ""):sub(1, 175)
-        end
+		env.parsefile = function(name)
+			return tostring(name):gsub("[*\\?:<>|]+", ""):sub(1, 175)
+		end
 
 		-- debug
 		env.getupvalues = (debug and debug.getupvalues) or getupvalues or getupvals
@@ -10656,13 +10656,13 @@ Main = (function()
 		-- other
 		--env.setfflag = setfflag
 		env.request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-        env.decompile = decompile or (env.getscriptbytecode and env.request and (function()
-            local success, err = pcall(function()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/konstant.lua"))()
-            end)
+		env.decompile = decompile or (env.getscriptbytecode and env.request and (function()
+			local success, err = pcall(function()
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/konstant.lua"))()
+			end)
 
-            return (success and decompile) or nil
-        end)())
+			return (success and decompile) or nil
+		end)())
 		env.protectgui = protect_gui or (syn and syn.protect_gui)
 		env.gethui = gethui or get_hidden_gui
 		env.setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)

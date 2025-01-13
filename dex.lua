@@ -20,6 +20,10 @@ local service = setmetatable({}, {
 	end
 })
 
+-- prevent environment implosion from references
+local oldgame = game
+local game = workspace.Parent
+
 local EmbeddedModules = {
 	Explorer = function()
 --[[
@@ -4824,7 +4828,7 @@ local EmbeddedModules = {
 			Lib.FetchCustomAsset = function(url,filepath)
 				if not env.writefile then return end
 
-				local s,data = pcall(game.HttpGet,game,url)
+				local s,data = pcall(oldgame.HttpGet,game,url)
 				if not s then return end
 
 				env.writefile(filepath,data)
@@ -10658,7 +10662,7 @@ Main = (function()
 		env.request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 		env.decompile = decompile or (env.getscriptbytecode and env.request and (function()
 			local success, err = pcall(function()
-				loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/konstant.lua"))()
+				loadstring(oldgame:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/konstant.lua"))()
 			end)
 
 			return (success and decompile) or nil
@@ -10666,27 +10670,7 @@ Main = (function()
 		env.protectgui = protect_gui or (syn and syn.protect_gui)
 		env.gethui = gethui or get_hidden_gui
 		env.setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
-		-- env.getnilinstances = getnilinstances or get_nil_instances or function() return {} end
-		-- WHY BAD WHY FUCK
-		env.getnilinstances = (function()
-			local getnilinstances = getnilinstances or get_nil_instances
-
-			if type(getnilinstances) == "function" then
-				local success, instances = pcall(function()
-					return getnilinstances()
-				end)
-
-				if success and instances and type(instances) == "table" then
-					local inst = instances[1]
-
-					if typeof(inst) == "Instance" and inst.Parent == nil then
-						return getnilinstances
-					end
-				end
-			end
-
-			return nil
-		end)()
+		env.getnilinstances = getnilinstances or get_nil_instances
 		env.getloadedmodules = getloadedmodules
 
 		-- if identifyexecutor and type(identifyexecutor) == "function" then Main.Executor = identifyexecutor() end
@@ -10740,7 +10724,7 @@ Main = (function()
 					Main.DepsVersionData[1] = ""
 				end
 			end
-			rawAPI = rawAPI or game:HttpGet("http://setup.roblox.com/"..Main.RobloxVersion.."-API-Dump.json")
+			rawAPI = rawAPI or oldgame:HttpGet("http://setup.roblox.com/"..Main.RobloxVersion.."-API-Dump.json")
 		else
 			if script:FindFirstChild("API") then
 				rawAPI = require(script.API)
@@ -10888,7 +10872,7 @@ Main = (function()
 					Main.DepsVersionData[1] = ""
 				end
 			end
-			rawXML = rawXML or game:HttpGet("https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/ReflectionMetadata.xml")
+			rawXML = rawXML or oldgame:HttpGet("https://raw.githubusercontent.com/CloneTrooper1019/Roblox-Client-Tracker/roblox/ReflectionMetadata.xml")
 		else
 			if script:FindFirstChild("RMD") then
 				rawXML = require(script.RMD)
@@ -11434,7 +11418,7 @@ Main = (function()
 					Main.RobloxVersion = Main.DepsVersionData[2]
 				end
 			end
-			Main.RobloxVersion = Main.RobloxVersion or game:HttpGet("http://setup.roblox.com/versionQTStudio")
+			Main.RobloxVersion = Main.RobloxVersion or oldgame:HttpGet("http://setup.roblox.com/versionQTStudio")
 		end
 
 		-- Fetch external deps

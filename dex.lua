@@ -8189,9 +8189,9 @@ local EmbeddedModules = {
 
 				funcs.ConvertText = function(self,text,toEditor)
 					if toEditor then
-						return text:gsub("\t",(" %s%s "):format(tabSub,tabSub))
+						return text:gsub("\t",(" %s "):format(tabSub))
 					else
-						return text:gsub((" %s%s "):format(tabSub,tabSub),"\t")
+						return text:gsub((" %s "):format(tabSub),"\t")
 					end
 				end
 
@@ -10666,7 +10666,27 @@ Main = (function()
 		env.protectgui = protect_gui or (syn and syn.protect_gui)
 		env.gethui = gethui or get_hidden_gui
 		env.setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
-		env.getnilinstances = getnilinstances or get_nil_instances or function() return {} end
+		-- env.getnilinstances = getnilinstances or get_nil_instances or function() return {} end
+		-- WHY BAD WHY FUCK
+		env.getnilinstances = (function()
+			local getnilinstances = getnilinstances or get_nil_instances
+
+			if type(getnilinstances) == "function" then
+				local success, instances = pcall(function()
+					return getnilinstances()
+				end)
+
+				if success and instances and type(instances) == "table" then
+					local inst = instances[1]
+
+					if typeof(inst) == "Instance" and inst.Parent == nil then
+						return getnilinstances
+					end
+				end
+			end
+
+			return nil
+		end)()
 		env.getloadedmodules = getloadedmodules
 
 		-- if identifyexecutor and type(identifyexecutor) == "function" then Main.Executor = identifyexecutor() end

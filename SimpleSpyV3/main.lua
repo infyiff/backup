@@ -486,7 +486,7 @@ end
 --- Drags gui (so long as mouse is held down)
 --- @param input InputObject
 function onBarInput(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         local lastPos = UserInputService:GetMouseLocation()
         local mainPos = Background.AbsolutePosition
         local offset = mainPos - lastPos
@@ -2332,4 +2332,30 @@ if configs.supersecretdevtoggle then
         local NotSound = Create("Sound",{Parent = SuperSecretFolder,Looped = false,Volume = math.random(1,5),SoundId = getsynasset(random[math.random(1,#random)])})
         NotSound:Play()
     end)
+end
+
+if table.find({
+    Enum.Platform.IOS, Enum.Platform.Android
+}, UserInputService:GetPlatform()) then
+    Background.Draggable = true
+    local QuickCapture = Instance.new("TextButton")
+	local UICorner = Instance.new("UICorner")
+	QuickCapture.Parent = SimpleSpy3
+	QuickCapture.BackgroundColor3 = Color3.fromRGB(37, 36, 38)
+	QuickCapture.BackgroundTransparency = 0.14
+	QuickCapture.Position = UDim2.new(0.529, 0, 0, 0)
+	QuickCapture.Size = UDim2.new(0, 32, 0, 33)
+	QuickCapture.Font = Enum.Font.SourceSansBold
+	QuickCapture.Text = "Spy"
+	QuickCapture.TextColor3 = Background.Visible and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(252, 51, 51)
+	QuickCapture.TextSize = 16
+	QuickCapture.TextWrapped = true
+    QuickCapture.ZIndex = 10
+	QuickCapture.Draggable = true
+	UICorner.CornerRadius = UDim.new(0.5, 0)
+	UICorner.Parent = QuickCapture
+	QuickCapture.MouseButton1Click:Connect(function()
+        Background.Visible = not Background.Visible
+        QuickCapture.TextColor3 = Background.Visible and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(252, 51, 51)
+	end)
 end

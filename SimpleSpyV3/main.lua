@@ -2339,23 +2339,23 @@ if table.find({
 }, UserInputService:GetPlatform()) then
     Background.Draggable = true
     local QuickCapture = Instance.new("TextButton")
-	local UICorner = Instance.new("UICorner")
-	QuickCapture.Parent = SimpleSpy3
-	QuickCapture.BackgroundColor3 = Color3.fromRGB(37, 36, 38)
-	QuickCapture.BackgroundTransparency = 0.14
-	QuickCapture.Position = UDim2.new(0.529, 0, 0, 0)
-	QuickCapture.Size = UDim2.new(0, 32, 0, 33)
-	QuickCapture.Font = Enum.Font.SourceSansBold
-	QuickCapture.Text = "Spy"
-	QuickCapture.TextColor3 = Background.Visible and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(252, 51, 51)
-	QuickCapture.TextSize = 16
-	QuickCapture.TextWrapped = true
+    local UICorner = Instance.new("UICorner")
+    QuickCapture.Parent = SimpleSpy3
+    QuickCapture.BackgroundColor3 = Color3.fromRGB(37, 36, 38)
+    QuickCapture.BackgroundTransparency = 0.14
+    QuickCapture.Position = UDim2.new(0.529, 0, 0, 0)
+    QuickCapture.Size = UDim2.new(0, 32, 0, 33)
+    QuickCapture.Font = Enum.Font.SourceSansBold
+    QuickCapture.Text = "Spy"
+    QuickCapture.TextColor3 = Background.Visible and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(252, 51, 51)
+    QuickCapture.TextSize = 16
+    QuickCapture.TextWrapped = true
     QuickCapture.ZIndex = 10
-	QuickCapture.Draggable = true
-	UICorner.CornerRadius = UDim.new(0.5, 0)
-	UICorner.Parent = QuickCapture
-	QuickCapture.MouseButton1Click:Connect(function()
+    QuickCapture.Draggable = true
+    UICorner.CornerRadius = UDim.new(0.5, 0)
+    UICorner.Parent = QuickCapture
+    QuickCapture.MouseButton1Click:Connect(function()
         Background.Visible = not Background.Visible
         QuickCapture.TextColor3 = Background.Visible and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(252, 51, 51)
-	end)
+    end)
 end

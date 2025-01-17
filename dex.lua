@@ -21,6 +21,8 @@ local service = setmetatable({}, {
 })
 
 -- prevent environment implosion from references
+-- mainly from the executor not having some game properties in their game variable
+-- so we gotta use vanilla game
 local oldgame = game
 local game = workspace.Parent
 
@@ -10660,7 +10662,9 @@ Main = (function()
 		-- other
 		--env.setfflag = setfflag
 		env.request = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-		env.decompile = decompile or (env.getscriptbytecode and env.request and (function()
+		-- hmm yes sanity check hmm fake decompile good
+		env.safeDecompile = type(decompile) == "function" and decompile
+		env.decompile = env.safeDecompile or (env.getscriptbytecode and env.request and (function()
 			local success, err = pcall(function()
 				loadstring(oldgame:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/konstant.lua"))()
 			end)

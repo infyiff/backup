@@ -1,11 +1,10 @@
 -- https://github.com/LorekeeperZinnia/Dex
 
 --[[
-	New Dex
-	Final Version
-	Developed by Moon
+	Dex
+	Created by Moon
 	Modified for Infinite Yield
-	
+
 	Dex is a debugging suite designed to help the user debug games and find any potential vulnerabilities.
 ]]
 
@@ -4220,8 +4219,8 @@ local EmbeddedModules = {
 			local PreviousScr = nil
 
 			ScriptViewer.ViewScript = function(scr)
-				local success, source = pcall(decompile or function() end, scr)
-				if not success or not source then source, PreviousScr = "-- DEX - Source failed to decompile", nil else PreviousScr = scr end
+				local success, source = pcall(env.decompile, scr)
+				if not success or not source then source, PreviousScr = ("-- DEX - %s failed to decompile %s"):format(env.executor, scr.ClassName), nil else PreviousScr = scr end
 				codeFrame:SetText(source:gsub("\0", "\\0"))
 				window:Show()
 			end
@@ -10677,7 +10676,7 @@ Main = (function()
 		env.getnilinstances = getnilinstances or get_nil_instances
 		env.getloadedmodules = getloadedmodules
 
-		-- if identifyexecutor and type(identifyexecutor) == "function" then Main.Executor = identifyexecutor() end
+        env.executor = type(identifyexecutor) == "function" and tostring(identifyexecutor()) or "Your executor"
 
 		Main.GuiHolder = Main.Elevated and service.CoreGui or plr:FindFirstChildWhichIsA("PlayerGui")
 

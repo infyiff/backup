@@ -960,6 +960,7 @@ local EmbeddedModules = {
 
 				if presentClasses["LuaSourceContainer"] then
 					context:AddRegistered("VIEW_SCRIPT", not presentClasses.isViableDecompileScript or env.decompile == nil)
+					context:AddRegistered("SAVE_SCRIPT", not presentClasses.isViableDecompileScript or env.decompile == nil or env.writefile == nil)
 					context:AddRegistered("SAVE_BYTECODE", not presentClasses.isViableDecompileScript or env.getscriptbytecode == nil or env.writefile == nil)
 				end
 
@@ -1405,12 +1406,24 @@ local EmbeddedModules = {
 					if scr then ScriptViewer.ViewScript(scr) end
 				end})
 
+				context:Register("SAVE_SCRIPT",{Name = "Save Script", IconMap = Explorer.MiscIcons, Icon = "Save", OnClick = function()
+					for _, v in next, selection.List do
+						if v.Obj:IsA("LuaSourceContainer") and env.isViableDecompileScript(v.Obj) then
+							local success, source = pcall(env.decompile, v.Obj)
+							if not success or not source then source = ("-- DEX - %s failed to decompile %s"):format(env.executor, v.Obj.ClassName) end
+							local fileName = ("%i.%s.%s.Source.txt"):format(game.PlaceId, v.Obj.ClassName, env.parsefile(v.Obj.Name))
+							env.writefile(fileName, source)
+							task.wait(0.2)
+						end
+					end
+				end})
+
 				context:Register("SAVE_BYTECODE",{Name = "Save Script Bytecode", IconMap = Explorer.MiscIcons, Icon = "Save", OnClick = function()
 					for _, v in next, selection.List do
 						if v.Obj:IsA("LuaSourceContainer") and env.isViableDecompileScript(v.Obj) then
 							local success, bytecode = pcall(getscriptbytecode, v.Obj)
 							if success and type(bytecode) == "string" then
-								local fileName = ("%i.%s.%s.txt"):format(game.PlaceId, v.Obj.ClassName, env.parsefile(v.Obj.Name))
+								local fileName = ("%i.%s.%s.Bytecode.txt"):format(game.PlaceId, v.Obj.ClassName, env.parsefile(v.Obj.Name))
 								env.writefile(fileName, bytecode)
 								task.wait(0.2)
 							end

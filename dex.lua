@@ -893,7 +893,16 @@ local EmbeddedModules = {
 				for i = 1, #sList do
 					local node = sList[i]
 					local class = node.Class
-					if not class then class = node.Obj.ClassName node.Class = class end
+					local obj = node.Obj
+
+					if not presentClasses.isViableDecompileScript then
+						presentClasses.isViableDecompileScript = env.isViableDecompileScript(obj)
+					end
+					if not class then
+						class = obj.ClassName
+						node.Class = class
+					end
+
 					local curClass = apiClasses[class]
 					while curClass and not presentClasses[curClass.Name] do
 						presentClasses[curClass.Name] = true
@@ -917,6 +926,7 @@ local EmbeddedModules = {
 				context:AddRegistered("COLLAPSE_ALL")
 
 				context:AddDivider()
+
 				if expanded == Explorer.SearchExpanded then context:AddRegistered("CLEAR_SEARCH_AND_JUMP_TO") end
 				if env.setclipboard then context:AddRegistered("COPY_PATH") end
 				context:AddRegistered("INSERT_OBJECT")
@@ -941,14 +951,16 @@ local EmbeddedModules = {
 				if presentClasses["TouchTransmitter"] then context:AddRegistered("FIRE_TOUCHTRANSMITTER", firetouchinterest == nil) end
 				if presentClasses["ClickDetector"] then context:AddRegistered("FIRE_CLICKDETECTOR", fireclickdetector == nil) end
 				if presentClasses["ProximityPrompt"] then context:AddRegistered("FIRE_PROXIMITYPROMPT", fireproximityprompt == nil) end
+
 				if presentClasses["Player"] then context:AddRegistered("SELECT_CHARACTER")context:AddRegistered("VIEW_PLAYER") end
 				if presentClasses["Players"] then
 					context:AddRegistered("SELECT_LOCAL_PLAYER")
 					context:AddRegistered("SELECT_ALL_CHARACTERS")
 				end
+
 				if presentClasses["LuaSourceContainer"] then
-					context:AddRegistered("VIEW_SCRIPT")
-					context:AddRegistered("SAVE_BYTECODE", env.getscriptbytecode == nil or env.writefile == nil)
+					context:AddRegistered("VIEW_SCRIPT", not presentClasses.isViableDecompileScript or env.decompile == nil)
+					context:AddRegistered("SAVE_BYTECODE", not presentClasses.isViableDecompileScript or env.getscriptbytecode == nil or env.writefile == nil)
 				end
 
 				if sMap[nilNode] then
@@ -1395,10 +1407,10 @@ local EmbeddedModules = {
 
 				context:Register("SAVE_BYTECODE",{Name = "Save Script Bytecode", IconMap = Explorer.MiscIcons, Icon = "Save", OnClick = function()
 					for _, v in next, selection.List do
-						if v.Obj:IsA("LuaSourceContainer") then
-							local success, bytecode = pcall(getscriptbytecode, scr)
+						if v.Obj:IsA("LuaSourceContainer") and env.isViableDecompileScript(v.Obj) then
+							local success, bytecode = pcall(getscriptbytecode, v.Obj)
 							if success and type(bytecode) == "string" then
-								local fileName = ("%i.Script.%s.txt"):format(game.PlaceId, env.parsefile(scr.Name))
+								local fileName = ("%i.%s.%s.txt"):format(game.PlaceId, v.Obj.ClassName, env.parsefile(v.Obj.Name))
 								env.writefile(fileName, bytecode)
 								task.wait(0.2)
 							end
@@ -10670,13 +10682,23 @@ Main = (function()
 
 			return (success and decompile) or nil
 		end)())
+		env.isViableDecompileScript = function(obj)
+			if obj:IsA("ModuleScript") then
+				return true
+			elseif obj:IsA("LocalScript") and (obj.RunContext == Enum.RunContext.Client or obj.RunContext == Enum.RunContext.Legacy) then
+				return true
+			elseif obj:IsA("Script") and obj.RunContext == Enum.RunContext.Client then
+				return true
+			end
+			return false
+		end
 		env.protectgui = protect_gui or (syn and syn.protect_gui)
 		env.gethui = gethui or get_hidden_gui
 		env.setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
 		env.getnilinstances = getnilinstances or get_nil_instances
 		env.getloadedmodules = getloadedmodules
 
-        env.executor = type(identifyexecutor) == "function" and tostring(identifyexecutor()) or "Your executor"
+		env.executor = type(identifyexecutor) == "function" and tostring(identifyexecutor()) or "Your executor"
 
 		Main.GuiHolder = Main.Elevated and service.CoreGui or plr:FindFirstChildWhichIsA("PlayerGui")
 

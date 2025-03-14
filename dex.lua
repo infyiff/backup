@@ -10750,6 +10750,11 @@ Main = (function()
 		end
 		recur(DefaultSettings,Settings)
 	end
+	
+	local function jsonDecode(str)
+		local suc, res = pcall(service.HttpService.JSONDecode, service.HttpService, str)
+		return suc and res or suc
+	end
 
 	Main.FetchAPI = function()
 		local api,rawAPI
@@ -10771,7 +10776,14 @@ Main = (function()
 			end
 		end
 		Main.RawAPI = rawAPI
-		api = service.HttpService:JSONDecode(rawAPI)
+		api = jsonDecode(rawAPI)
+
+		-- backup for kaboom
+		if not api then
+			rawAPI = oldgame:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/rbx_api.dat")
+			Main.RawAPI = rawAPI
+			api = jsonDecode(rawAPI)
+		end
 
 		local classes,enums = {},{}
 		local categoryOrder,seenCategories = {},{}
@@ -11450,6 +11462,7 @@ Main = (function()
 		if Main.Elevated then
 			local fileVer = Lib.ReadFile("dex/deps_version.dat")
 			Main.ClientVersion = Version()
+
 			if fileVer then
 				Main.DepsVersionData = string.split(fileVer,"\n")
 				if Main.LocalDepsUpToDate() then
@@ -11457,6 +11470,11 @@ Main = (function()
 				end
 			end
 			Main.RobloxVersion = Main.RobloxVersion or oldgame:HttpGet("http://setup.roblox.com/versionQTStudio")
+
+			-- backup for kaboom
+			if #Main.RobloxVersion < 1 then
+				Main.RobloxVersion = oldgame:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/deps_version.dat"):gsub("%s+", "")
+			end
 		end
 
 		-- Fetch external deps

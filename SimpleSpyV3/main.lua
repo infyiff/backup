@@ -1,4 +1,5 @@
--- https://github.com/78n/SimpleSpy
+--!native
+-- https://github.com/78n/SimpleSpy 50/50 this breaks but it's a beta for a reason!
 
 if getgenv().SimpleSpyExecuted and type(getgenv().SimpleSpyShutdown) == "function" then
     getgenv().SimpleSpyShutdown()
@@ -116,7 +117,7 @@ local function Search(logtable,tbl)
 end
 
 local function IsCyclicTable(tbl)
-	local checkedtables = {}
+    local checkedtables = {}
 
     local function SearchTable(tbl)
         table.insert(checkedtables,tbl)
@@ -128,7 +129,7 @@ local function IsCyclicTable(tbl)
         end
     end
 
-	return SearchTable(tbl)
+    return SearchTable(tbl)
 end
 
 local function deepclone(args: table, copies: table): table
@@ -154,25 +155,25 @@ local function deepclone(args: table, copies: table): table
 end
 
 local function rawtostring(userdata)
-	if type(userdata) == "table" or typeof(userdata) == "userdata" then
-		local rawmetatable = getrawmetatable(userdata)
-		local cachedstring = rawmetatable and rawget(rawmetatable, "__tostring")
+    if type(userdata) == "table" or typeof(userdata) == "userdata" then
+        local rawmetatable = getrawmetatable(userdata)
+        local cachedstring = rawmetatable and rawget(rawmetatable, "__tostring")
 
-		if cachedstring then
+        if cachedstring then
             local wasreadonly = isreadonly(rawmetatable)
             if wasreadonly then
                 makewritable(rawmetatable)
             end
-			rawset(rawmetatable, "__tostring", nil)
-			local safestring = tostring(userdata)
-			rawset(rawmetatable, "__tostring", cachedstring)
+            rawset(rawmetatable, "__tostring", nil)
+            local safestring = tostring(userdata)
+            rawset(rawmetatable, "__tostring", cachedstring)
             if wasreadonly then
                 makereadonly(rawmetatable)
             end
-			return safestring
-		end
-	end
-	return tostring(userdata)
+            return safestring
+        end
+    end
+    return tostring(userdata)
 end
 
 local CoreGui = SafeGetService("CoreGui")
@@ -219,7 +220,8 @@ function ErrorPrompt(Message,state)
     end
 end
 
-local Highlight = loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/highlight.lua"))() -- (isfile and loadfile and isfile("Highlight.lua") and loadfile("Highlight.lua")()) or loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/Highlight.lua"))()
+local Highlight = (isfile and loadfile and isfile("Highlight.lua") and loadfile("Highlight.lua")()) or loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/SimpleSpyV3/highlight.lua"))()
+local LazyFix = loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/SimpleSpyV3/DataToCode.lua"))() -- Very lazy fix as I'm legit just pasting it from the rewrite
 
 local SimpleSpy3 = Create("ScreenGui",{ResetOnSpawn = false})
 local Storage = Create("Folder",{})
@@ -305,12 +307,14 @@ local running_threads = {}
 local originalnamecall
 
 local remoteEvent = Instance.new("RemoteEvent",Storage)
+local unreliableRemoteEvent = Instance.new("UnreliableRemoteEvent")
 local remoteFunction = Instance.new("RemoteFunction",Storage)
 local NamecallHandler = Instance.new("BindableEvent",Storage)
 local IndexHandler = Instance.new("BindableEvent",Storage)
 local GetDebugIdHandler = Instance.new("BindableFunction",Storage) --Thanks engo for the idea of using BindableFunctions
 
 local originalEvent = remoteEvent.FireServer
+local originalUnreliableEvent = unreliableRemoteEvent.FireServer
 local originalFunction = remoteFunction.InvokeServer
 local GetDebugIDInvoke = GetDebugIdHandler.Invoke
 
@@ -1016,7 +1020,7 @@ function genScript(remote, args)
     local gen = ""
     if #args > 0 then
         xpcall(function()
-            gen = v2v({args = args}) .. "\n"
+            gen = "local args = "..LazyFix.Convert(args, true) .. "\n"
         end,function(err)
             gen ..= "-- An error has occured:\n--"..err.."\n-- TableToString failure! Reverting to legacy functionality (results may vary)\nlocal args = {"
             xpcall(function()
@@ -1048,16 +1052,16 @@ function genScript(remote, args)
         if not remote:IsDescendantOf(game) and not getnilrequired then
             gen = "function getNil(name,class) for _,v in next, getnilinstances()do if v.ClassName==class and v.Name==name then return v;end end end\n\n" .. gen
         end
-        if remote:IsA("RemoteEvent") then
-            gen ..= v2s(remote) .. ":FireServer(unpack(args))"
+        if remote:IsA("RemoteEvent") or remote:IsA("UnreliableRemoteEvent") then
+            gen ..= LazyFix.ConvertKnown("Instance", remote) .. ":FireServer(unpack(args))"
         elseif remote:IsA("RemoteFunction") then
-            gen = gen .. v2s(remote) .. ":InvokeServer(unpack(args))"
+            gen = gen .. LazyFix.ConvertKnown("Instance", remote) .. ":InvokeServer(unpack(args))"
         end
     else
-        if remote:IsA("RemoteEvent") then
-            gen ..= v2s(remote) .. ":FireServer()"
+        if remote:IsA("RemoteEvent") or remote:IsA("UnreliableRemoteEvent") then
+            gen ..= LazyFix.ConvertKnown("Instance", remote) .. ":FireServer()"
         elseif remote:IsA("RemoteFunction") then
-            gen ..= v2s(remote) .. ":InvokeServer()"
+            gen ..= LazyFix.ConvertKnown("Instance", remote) .. ":InvokeServer()"
         end
     end
     prevTables = {}
@@ -1692,7 +1696,7 @@ function remoteHandler(data)
         history[id].lastCall = tick()
     end
 
-    if data.remote:IsA("RemoteEvent") and lower(data.method) == "fireserver" then
+    if (data.remote:IsA("RemoteEvent") or data.remote:IsA("UnreliableRemoteEvent")) and lower(data.method) == "fireserver" then
         newRemote("event", data)
     elseif data.remote:IsA("RemoteFunction") and lower(data.method) == "invokeserver" then
         newRemote("function", data)
@@ -1703,7 +1707,7 @@ local newindex = function(method,originalfunction,...)
     if typeof(...) == 'Instance' then
         local remote = cloneref(...)
 
-        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") or remote:IsA("UnreliableRemoteEvent") then
             if not configs.logcheckcaller and checkcaller() then return originalfunction(...) end
             local id = ThreadGetDebugId(remote)
             local blockcheck = tablecheck(blocklist,remote,id)
@@ -1763,7 +1767,7 @@ local newnamecall = newcclosure(function(...)
         if typeof(...) == 'Instance' then
             local remote = cloneref(...)
 
-            if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") then    
+            if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") or IsA(remote,"UnreliableRemoteEvent") then    
                 if not configs.logcheckcaller and checkcaller() then return originalnamecall(...) end
                 local id = ThreadGetDebugId(remote)
                 local blockcheck = tablecheck(blocklist,remote,id)
@@ -1821,6 +1825,10 @@ local newFireServer = newcclosure(function(...)
     return newindex("FireServer",originalEvent,...)
 end)
 
+local newUnreliableFireServer = newcclosure(function(...)
+    return newindex("FireServer",originalUnreliableEvent,...)
+end)
+
 local newInvokeServer = newcclosure(function(...)
     return newindex("InvokeServer",originalFunction,...)
 end)
@@ -1830,6 +1838,7 @@ local function disablehooks()
         unhook(getrawmetatable(game).__namecall,originalnamecall)
         unhook(Instance.new("RemoteEvent").FireServer, originalEvent)
         unhook(Instance.new("RemoteFunction").InvokeServer, originalFunction)
+        unhook(Instance.new("UnreliableRemoteEvent").FireServer, originalUnreliableEvent)
         restorefunction(originalnamecall)
         restorefunction(originalEvent)
         restorefunction(originalFunction)
@@ -1841,6 +1850,7 @@ local function disablehooks()
         end
         hookfunction(Instance.new("RemoteEvent").FireServer, originalEvent)
         hookfunction(Instance.new("RemoteFunction").InvokeServer, originalFunction)
+        hookfunction(Instance.new("UnreliableRemoteEvent").FireServer, originalUnreliableEvent)
     end
 end
 
@@ -1852,6 +1862,7 @@ function toggleSpy()
             oldnamecall = hook(getrawmetatable(game).__namecall,clonefunction(newnamecall))
             originalEvent = hook(Instance.new("RemoteEvent").FireServer, clonefunction(newFireServer))
             originalFunction = hook(Instance.new("RemoteFunction").InvokeServer, clonefunction(newInvokeServer))
+            originalUnreliableEvent = hook(Instance.new("UnreliableRemoteEvent").FireServer, clonefunction(newUnreliableFireServer))
         else
             if hookmetamethod then
                 oldnamecall = hookmetamethod(game, "__namecall", clonefunction(newnamecall))
@@ -1860,6 +1871,7 @@ function toggleSpy()
             end
             originalEvent = hookfunction(Instance.new("RemoteEvent").FireServer, clonefunction(newFireServer))
             originalFunction = hookfunction(Instance.new("RemoteFunction").InvokeServer, clonefunction(newInvokeServer))
+            originalUnreliableEvent = hookfunction(Instance.new("UnreliableRemoteEvent").FireServer, clonefunction(newUnreliableFireServer))
         end
         originalnamecall = originalnamecall or function(...)
             return oldnamecall(...)
@@ -1912,17 +1924,17 @@ if not getgenv().SimpleSpyExecuted then
         end
         codebox = Highlight.new(CodeBox)
         logthread(spawn(function()
-            local suc,err = pcall(game.HttpGet,game,"https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/update.txt")
+            local suc,err = pcall(game.HttpGet,game,"https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/SimpleSpyV3/update.txt")
             codebox:setRaw((suc and err) or "")
         end))
         getgenv().SimpleSpy = SimpleSpy
         getgenv().getNil = function(name,class)
-			for _,v in next, getnilinstances() do
-				if v.ClassName == class and v.Name == name then
-					return v;
-				end
-			end
-		end
+            for _,v in next, getnilinstances() do
+                if v.ClassName == class and v.Name == name then
+                    return v;
+                end
+            end
+        end
         Background.MouseEnter:Connect(function(...)
             mouseInGui = true
             mouseEntered()
@@ -2029,9 +2041,9 @@ newButton("Run Code",
             TextLabel.Text = "Executing..."
             xpcall(function()
                 local returnvalue
-                if Remote:IsA("RemoteEvent") then
+                if Remote:IsA("RemoteEvent") or Remote:IsA("UnreliableRemoteEvent") then
                     returnvalue = Remote:FireServer(unpack(selected.args))
-                else
+                elseif Remote:IsA("RemoteFunction") then
                     returnvalue = Remote:InvokeServer(unpack(selected.args))
                 end
 
@@ -2320,7 +2332,7 @@ if configs.supersecretdevtoggle then
         return "Load's Simple Spy V3"
     end,
     function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/infyiff/backup/main/SimpleSpyV3/main.lua"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpySource.lua"))()
     end)
     local SuperSecretFolder = Create("Folder",{Parent = SimpleSpy3})
     newButton("SUPER SECRET BUTTON",function()

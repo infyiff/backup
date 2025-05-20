@@ -30,41 +30,9 @@ local inf, neginf = math.huge, -math.huge
 local DefaultMethods = {}
 local Methods = setmetatable({}, {__index = DefaultMethods})
 local Class = {
+	Methods = Methods,
 	__tostringUnsupported = false, -- whether or not to tostring unsupported types
 	__Serializeinf = false
-}
-
-local Services = {
-	Workspace = "workspace",
-	Lighting = "game.lighting",
-	GlobalSettings = "settings()",
-	Stats = "stats()",
-	UserSettings = "UserSettings()",
-	PluginManagerInterface = "PluginManager()",
-	DebuggerManager = "DebuggerManager()"
-}
-
-local Signals = { -- You theoretically could serialize the api to retrieve most of the Signals but I don't believe that its really worth it
-	GraphicsQualityChangeRequest = "game.GraphicsQualityChangeRequest",
-	AllowedGearTypeChanged = "game.AllowedGearTypeChanged",
-	ScreenshotSavedToAlbum = "game.ScreenshotSavedToAlbum",
-	UniverseMetadataLoaded = "game.UniverseMetadataLoaded",
-	ScreenshotReady = "game.ScreenshotReady",
-	ServiceRemoving = "game.ServiceRemoving",
-	ServiceAdded = "game.ServiceAdded",
-	ItemChanged = "game.ItemChanged",
-	CloseLate = "game.CloseLate",
-	Loaded = "game.Loaded",
-	Close = "game.Close",
-
-	RobloxGuiFocusedChanged = "game:GetService(\"RunService\").RobloxGuiFocusedChanged",
-	PostSimulation = "game:GetService(\"RunService\").PostSimulation",
-	RenderStepped = "game:GetService(\"RunService\").RenderStepped",
-	PreSimulation = "game:GetService(\"RunService\").PreSimulation",
-	PreAnimation = "game:GetService(\"RunService\").PreAnimation",
-	PreRender = "game:GetService(\"RunService\").PreRender",
-	Heartbeat = "game:GetService(\"RunService\").Heartbeat",
-	Stepped = "game:GetService(\"RunService\").Stepped"
 }
 
 local Keywords = {
@@ -95,173 +63,8 @@ local Keywords = {
 	["nil"] = "\"nil\""
 }
 
-local ByteList do
-	ByteList = {
-		[7] = "\\a",
-		[8] = "\\b",
-		[9] = "\\t",
-		[10] = "\\n",
-		[11] = "\\v",
-		[12] = "\\f",
-		[13] = "\\r",
-		[34] = "\\\"",
-		[92] = "\\\\"
-	}
-
-	for i = 0, 255 do
-		local Character = string.char(i)
-
-		if not ByteList[Character] and (i < 32 or i > 126) then
-			ByteList[Character] = ("\\%03d"):format(i)
-		end
-	end
-end
-
-local Enums = {} do
-	for i,v in Enum:GetEnums() do
-		Enums[v] = "Enum."..tostring(v)
-	end
-end
-
-local GlobalFunctions = {} do
-	local getrenv = getrenv or (function() -- support for studio executors
-		local env = { -- I could be missing a couple libraries
-			bit32 = bit32,
-			buffer = buffer,
-			coroutine = coroutine,
-			debug = debug,
-			math = math,
-			os = os,
-			string = string,
-			table = table,
-			utf8 = utf8,
-			Content = Content,
-			Axes = Axes,
-			AdReward = AdReward, --Empty
-			BrickColor = BrickColor,
-			CatalogSearchParams = CatalogSearchParams,
-			CFrame = CFrame,
-			Color3 = Color3,
-			ColorSequence = ColorSequence,
-			ColorSequenceKeypoint = ColorSequenceKeypoint,
-			DateTime = DateTime,
-			DockWidgetPluginGuiInfo = DockWidgetPluginGuiInfo,
-			Faces = Faces,
-			FloatCurveKey = FloatCurveKey,
-			Font = Font,
-			Instance = Instance,
-			NumberRange = NumberRange,
-			NumberSequence = NumberSequence,
-			NumberSequenceKeypoint = NumberSequenceKeypoint,
-			OverlapParams = OverlapParams,
-			PathWaypoint = PathWaypoint,
-			PhysicalProperties = PhysicalProperties,
-			Random = Random,
-			Ray = Ray,
-			RaycastParams = RaycastParams,
-			Rect = Rect,
-			Region3 = Region3,
-			Region3int16 = Region3int16,
-			RotationCurveKey = RotationCurveKey,
-			SharedTable = SharedTable,
-			task = task,
-			TweenInfo = TweenInfo,
-			UDim = UDim,
-			UDim2 = UDim2,
-			Vector2 = Vector2,
-			Vector2int16 = Vector2int16,
-			Vector3 = Vector3,
-			vector = vector,
-			Vector3int16 = Vector3int16,
-			CellId = CellId, -- Undocumented
-			PluginDrag = PluginDrag,
-			SecurityCapabilities = SecurityCapabilities,
-
-			assert = assert,
-			error = error,
-			getfenv = getfenv,
-			getmetatable = getmetatable,
-			ipairs = ipairs,
-			loadstring = loadstring,
-			newproxy = newproxy,
-			next = next,
-			pairs = pairs,
-			pcall = pcall,
-			print = print,
-			rawequal = rawequal,
-			rawget = rawget,
-			rawlen = rawlen,
-			rawset = rawset,
-			select = select,
-			setfenv = setfenv,
-			setmetatable = setmetatable,
-			tonumber = tonumber,
-			tostring = tostring,
-			unpack = unpack,
-			xpcall = xpcall,
-			collectgarbage = collectgarbage,
-			delay = delay,
-			gcinfo = gcinfo,
-			PluginManager = PluginManager,
-			DebuggerManager = DebuggerManager,
-			require = require,
-			settings = settings,
-			spawn = spawn,
-			tick = tick,
-			time = time,
-			UserSettings = UserSettings,
-			wait = wait,
-			warn = warn,
-			Delay = Delay,
-			ElapsedTime = ElapsedTime,
-			elapsedTime = elapsedTime,
-			printidentity = printidentity,
-			Spawn = Spawn,
-			Stats = Stats,
-			stats = stats,
-			Version = Version,
-			version = version,
-			Wait = Wait
-		}
-
-		return function()
-			return env
-		end
-	end)()
-
-	local Visited = setmetatable({}, {__mode = "k"}) -- support for people who actually modify the roblox env
-
-	for i,v in getrenv() do
-		local ElementType = type(i) == "string" and type(v)
-
-		if ElementType then
-			if ElementType == "table" then
-				local function LoadLibrary(Path : string, tbl : {[string] : any})
-					if not Visited[tbl] then
-						Visited[tbl] = true
-
-						for i,v in next, tbl do
-							local Type = type(i) == "string" and not Keywords[i] and i:match("[A-z_][A-z_0-9]") and type(v)
-							local NewPath = Type and (Type == "function" or Type == "table") and Path.."."..i
-
-							if NewPath then
-								if Type == "function" then
-									GlobalFunctions[v] = NewPath
-								else
-									LoadLibrary(NewPath, v)
-								end
-							end
-						end
-					end
-				end
-
-				LoadLibrary(i, v)
-				table.clear(Visited)
-			elseif ElementType == "function" then
-				GlobalFunctions[v] = i
-			end
-		end
-	end
+local islclosure = islclosure or function(Function : (...any?) -> (...any?))
+	return info(Function, "l") ~= -1
 end
 
 local DefaultVectors, DefaultCFrames = {}, {} do
@@ -280,6 +83,11 @@ local DefaultVectors, DefaultCFrames = {}, {} do
 	ExtractTypes(vector, "vector", "Vector3", DefaultVectors)
 	ExtractTypes(Vector3, "Vector3", "Vector3", DefaultVectors)
 	ExtractTypes(CFrame, "CFrame", "CFrame", DefaultCFrames)
+
+	Class.DefaultTypes = {
+		Vector3 = DefaultVectors,
+		CFrame = DefaultCFrames,
+	}
 end
 
 local function Serialize<Type>(DataStructure : Type, format : boolean?, indents : string, CyclicList : typeof(setmetatable({}, {__mode = "k"}))?, InComment : boolean?)
@@ -288,19 +96,11 @@ local function Serialize<Type>(DataStructure : Type, format : boolean?, indents 
 	return DataHandler and DataHandler(DataStructure, format, indents, CyclicList, InComment) or "nil --["..(not InComment and "" or "=").."[ Unsupported Data Type | "..typeof(DataStructure)..(not Class.__tostringUnsupported and "" or " | "..tostring(DataStructure)).." ]"..(not InComment and "" or "=").."]"
 end
 
-local function islclosure(Function : (...any?) -> (...any?))
-	return info(Function, "l") ~= -1
-end
-
-local function nanToString(int : number)
-	return int == int and int or "0/0"
-end
-
 local function ValidateSharedTableIndex(Index : string)
 	local IsKeyword = type(Index) == "number" and Index or Keywords[Index]
 
 	if not IsKeyword then
-		if #Index ~= 0 then
+		if Index ~= "" then
 			local IndexBuffer = fromstring(Index)
 			local FirstByte = readu8(IndexBuffer, 0)
 
@@ -330,17 +130,15 @@ local function ValidateIndex(Index : any)
 	local IsNumber = IndexType == "number"
 
 	if IsNumber or IndexType == "string" then
-		local IsKeyword = (IsNumber and Index or Keywords[Index])
+		local IsKeyword = IsNumber and Index or Keywords[Index]
 
 		if not IsKeyword then
-			if #Index ~= 0 then
+			if Index ~= "" then
 				local IndexBuffer = fromstring(Index)
 				local FirstByte = readu8(IndexBuffer, 0)
 
 				if FirstByte >= 97 and FirstByte <= 122 or FirstByte >= 65 and FirstByte <= 90 or FirstByte == 95 then
-					local IndexLength = #Index
-
-					for i = 1, IndexLength-1 do
+					for i = 1, #Index-1 do
 						local Byte = readu8(IndexBuffer, i)
 
 						if not ((Byte >= 97 and Byte <= 122) or (Byte >= 65 and Byte <= 90) or Byte == 95 or (Byte >= 48 and Byte <= 57)) then
@@ -388,29 +186,31 @@ function DefaultMethods.CFrame(CFrame : CFrame)
 	return Generation
 end
 
-local DefaultCatalogSearchParams = CatalogSearchParams.new()
-function DefaultMethods.CatalogSearchParams(Params : CatalogSearchParams, format : boolean?, indents : string)
-	if DefaultCatalogSearchParams ~= Params then
-		local formatspace = format and "\n"..indents or " "
-		local SerializeString = Methods.string
-		local SearchKeyword = Params.SearchKeyword
-		local MinPrice = Params.MinPrice
-		local MaxPrice = Params.MaxPrice
-		local SortType = Params.SortType
-		local SortAggregation = Params.SortAggregation
-		local CategoryFilter = Params.CategoryFilter
-		local SalesTypeFilter = Params.SalesTypeFilter
-		local BundleTypes = Params.BundleTypes
-		local AssetTypes = Params.AssetTypes
-		local CreatorName = Params.CreatorName
-		local CreatorType = Params.CreatorType
-		local CreatorId = Params.CreatorId
-		local Limit = Params.Limit
+do
+	local DefaultCatalogSearchParams = CatalogSearchParams.new()
+	function DefaultMethods.CatalogSearchParams(Params : CatalogSearchParams, format : boolean?, indents : string)
+		if DefaultCatalogSearchParams ~= Params then
+			local formatspace = format and "\n"..indents or " "
+			local SerializeString = Methods.string
+			local SearchKeyword = Params.SearchKeyword
+			local MinPrice = Params.MinPrice
+			local MaxPrice = Params.MaxPrice
+			local SortType = Params.SortType
+			local SortAggregation = Params.SortAggregation
+			local CategoryFilter = Params.CategoryFilter
+			local SalesTypeFilter = Params.SalesTypeFilter
+			local BundleTypes = Params.BundleTypes
+			local AssetTypes = Params.AssetTypes
+			local CreatorName = Params.CreatorName
+			local CreatorType = Params.CreatorType
+			local CreatorId = Params.CreatorId
+			local Limit = Params.Limit
 
-		return "(function(Param : CatalogSearchParams)"..formatspace..(SearchKeyword ~= "" and "\tParam.SearchKeyword = "..SerializeString(SearchKeyword)..formatspace or "")..(MinPrice ~= 0 and "\tParam.MinPrice = "..MinPrice..formatspace or "")..(MaxPrice ~= 2147483647 and "\tParam.MaxPrice = "..MaxPrice..formatspace or "")..(SortType ~= Enum.CatalogSortType.Relevance and "\tParam.SortType = Enum.CatalogSortType."..SortType.Name..formatspace or "")..(SortAggregation ~= Enum.CatalogSortAggregation.AllTime and "\tParam.SortAggregation = Enum.CatalogSortAggregation."..SortAggregation.Name..formatspace or "")..(CategoryFilter ~= Enum.CatalogCategoryFilter.None and "\tParam.CategoryFilter = Enum.CatalogCategoryFilter."..CategoryFilter.Name..formatspace or "")..(SalesTypeFilter ~= Enum.SalesTypeFilter.All and "\tParam.SalesTypeFilter = Enum.SalesTypeFilter."..SalesTypeFilter.Name..formatspace or "")..(#BundleTypes > 0 and "\tParam.BundleTypes = "..Methods.table(BundleTypes, false, "")..formatspace or "")..(#AssetTypes > 0 and "\tParam.AssetTypes = "..Methods.table(AssetTypes, false, "")..formatspace or "")..(Params.IncludeOffSale and "\tParams.IncludeOffSale = true"..formatspace or "")..(CreatorName ~= "" and "\tParams.CreatorName = "..SerializeString(CreatorName)..formatspace or "")..(CreatorType ~= Enum.CreatorTypeFilter.All and "\tParam.CreatorType = Enum.CreatorTypeFilter."..CreatorType.Name..formatspace or "")..(CreatorId ~= 0 and "\tParams.CreatorId = "..CreatorId..formatspace or "")..(Limit ~= 30 and "\tParams.Limit = "..Limit..formatspace or "").."\treturn Params"..formatspace.."end)(CatalogSearchParams.new())"
+			return "(function(Param : CatalogSearchParams)"..formatspace..(SearchKeyword ~= "" and "\tParam.SearchKeyword = "..SerializeString(SearchKeyword)..formatspace or "")..(MinPrice ~= 0 and "\tParam.MinPrice = "..MinPrice..formatspace or "")..(MaxPrice ~= 2147483647 and "\tParam.MaxPrice = "..MaxPrice..formatspace or "")..(SortType ~= Enum.CatalogSortType.Relevance and "\tParam.SortType = Enum.CatalogSortType."..SortType.Name..formatspace or "")..(SortAggregation ~= Enum.CatalogSortAggregation.AllTime and "\tParam.SortAggregation = Enum.CatalogSortAggregation."..SortAggregation.Name..formatspace or "")..(CategoryFilter ~= Enum.CatalogCategoryFilter.None and "\tParam.CategoryFilter = Enum.CatalogCategoryFilter."..CategoryFilter.Name..formatspace or "")..(SalesTypeFilter ~= Enum.SalesTypeFilter.All and "\tParam.SalesTypeFilter = Enum.SalesTypeFilter."..SalesTypeFilter.Name..formatspace or "")..(#BundleTypes > 0 and "\tParam.BundleTypes = "..Methods.table(BundleTypes, false, "")..formatspace or "")..(#AssetTypes > 0 and "\tParam.AssetTypes = "..Methods.table(AssetTypes, false, "")..formatspace or "")..(Params.IncludeOffSale and "\tParams.IncludeOffSale = true"..formatspace or "")..(CreatorName ~= "" and "\tParams.CreatorName = "..SerializeString(CreatorName)..formatspace or "")..(CreatorType ~= Enum.CreatorTypeFilter.All and "\tParam.CreatorType = Enum.CreatorTypeFilter."..CreatorType.Name..formatspace or "")..(CreatorId ~= 0 and "\tParams.CreatorId = "..CreatorId..formatspace or "")..(Limit ~= 30 and "\tParams.Limit = "..Limit..formatspace or "").."\treturn Params"..formatspace.."end)(CatalogSearchParams.new())"
+		end
+
+		return "CatalogSearchParams.new()"
 	end
-
-	return "CatalogSearchParams.new()"
 end
 
 function DefaultMethods.Color3(Color : Color3)
@@ -456,8 +256,16 @@ function DefaultMethods.Enum(Enum : Enum)
 	return "Enums."..tostring(Enum)
 end
 
-function DefaultMethods.EnumItem(Item : EnumItem)
-	return Enums[Item.EnumType].."."..Item.Name
+do
+	local Enums = {}
+
+	for i,v in Enum:GetEnums() do
+		Enums[v] = "Enum."..tostring(v)
+	end
+
+	function DefaultMethods.EnumItem(Item : EnumItem)
+		return Enums[Item.EnumType].."."..Item.Name
+	end
 end
 
 function DefaultMethods.Enums()
@@ -485,60 +293,74 @@ function DefaultMethods.Font(Font : Font)
 	return "Font.new("..Methods.string(Font.Family)..", Enum.FontWeight."..Font.Weight.Name..", Enum.FontStyle."..Font.Style.Name..")"
 end
 
-if IsClient then
-	local LocalPlayer = Players.LocalPlayer
-	if not LocalPlayer then
-		Players:GetPropertyChangedSignal("LocalPlayer"):Once(function()
-			LocalPlayer = Players.LocalPlayer
-		end)
-	end
+do
+	local Services = {
+		Workspace = "workspace",
+		Lighting = "game.lighting",
+		GlobalSettings = "settings()",
+		Stats = "stats()",
+		UserSettings = "UserSettings()",
+		PluginManagerInterface = "PluginManager()",
+		DebuggerManager = "DebuggerManager()"
+	}
 
-	-- Not garenteed to return the correct generation
-	function DefaultMethods.Instance(obj : Instance) -- Client
-		local ObjectParent = obj.Parent
-		local ObjectClassName = obj.ClassName
-
-		if ObjectParent then
-			local ObjectName = Methods.string(obj.Name)
-
-			if ObjectClassName ~= "Model" and ObjectClassName ~= "Player" then
-				local IsService, Output = pcall(FindService, game, ObjectClassName) -- Generation can and will break when presented with noncreatable Instances such as Path (which is created by PathService:CreateAsync())
-
-				return (not IsService or not Output) and Methods.Instance(ObjectParent)..":WaitForChild("..ObjectName..")" or Services[ObjectClassName] or "game:GetService(\""..ObjectClassName.."\")"
-			elseif ObjectClassName == "Model" then
-				local Player = Players:GetPlayerFromCharacter(obj)
-
-				return not Player and Methods.Instance(ObjectParent)..":WaitForChild("..ObjectName..")" or "game:GetService(\"Players\")".. (Player == LocalPlayer and ".LocalPlayer.Character" or ":WaitForChild("..ObjectName..").Character")
-			end
-
-			return "game:GetService(\"Players\")".. (obj == LocalPlayer and ".LocalPlayer" or ":WaitForChild("..ObjectName..")") 
+	if IsClient then
+		local LocalPlayer = Players.LocalPlayer
+		if not LocalPlayer then
+			Players:GetPropertyChangedSignal("LocalPlayer"):Once(function()
+				LocalPlayer = Players.LocalPlayer
+			end)
 		end
 
-		return ObjectClassName == "DataModel" and "game" or "Instance.new(\""..ObjectClassName.."\", nil)"
-	end
-else
-	function DefaultMethods.Instance(obj : Instance) -- Server
-		local ObjectParent = obj.Parent
-		local ObjectClassName = obj.ClassName
+		-- Not garenteed to return the correct generation
+		function DefaultMethods.Instance(obj : Instance) -- Client
+			local ObjectParent = obj.Parent
+			local ObjectClassName = obj.ClassName
 
-		if ObjectParent then
-			local ObjectName = Methods.string(obj.Name)
+			if ObjectParent then
+				local ObjectName = Methods.string(obj.Name)
 
-			if ObjectClassName ~= "Model" and ObjectClassName ~= "Player" then
-				local IsService, Output = pcall(FindService, game, ObjectClassName) -- Generation can and will break when presented with noncreatable Instances such as Path (which is created by PathService:CreateAsync())
+				if ObjectClassName ~= "Model" and ObjectClassName ~= "Player" then
+					local IsService, Output = pcall(FindService, game, ObjectClassName) -- Generation can and will break when presented with noncreatable Instances such as Path (which is created by PathService:CreateAsync())
 
-				return (not IsService or not Output) and Methods.Instance(ObjectParent)..":WaitForChild("..ObjectName..")" or Services[ObjectClassName] or "game:GetService(\""..ObjectClassName.."\")"
-			elseif ObjectClassName == "Model" then
-				local Player = Players:GetPlayerFromCharacter(obj)
+					return (not IsService or not Output) and Methods.Instance(ObjectParent)..":WaitForChild("..ObjectName..")" or Services[ObjectClassName] or "game:GetService(\""..ObjectClassName.."\")"
+				elseif ObjectClassName == "Model" then
+					local Player = Players:GetPlayerFromCharacter(obj)
 
-				return not Player and Methods.Instance(ObjectParent)..":WaitForChild("..ObjectName..")" or "game:GetService(\"Players\"):WaitForChild("..ObjectName..").Character"
+					return not Player and Methods.Instance(ObjectParent)..":WaitForChild("..ObjectName..")" or "game:GetService(\"Players\")".. (Player == LocalPlayer and ".LocalPlayer.Character" or ":WaitForChild("..ObjectName..").Character")
+				end
+
+				return "game:GetService(\"Players\")".. (obj == LocalPlayer and ".LocalPlayer" or ":WaitForChild("..ObjectName..")") 
 			end
 
-			return "game:GetService(\"Players\"):WaitForChild("..ObjectName..")"
+			return ObjectClassName == "DataModel" and "game" or "Instance.new(\""..ObjectClassName.."\", nil)"
 		end
+	else
+		function DefaultMethods.Instance(obj : Instance) -- Server
+			local ObjectParent = obj.Parent
+			local ObjectClassName = obj.ClassName
 
-		return ObjectClassName == "DataModel" and "game" or "Instance.new(\""..ObjectClassName.."\", nil)"
+			if ObjectParent then
+				local ObjectName = Methods.string(obj.Name)
+
+				if ObjectClassName ~= "Model" and ObjectClassName ~= "Player" then
+					local IsService, Output = pcall(FindService, game, ObjectClassName) -- Generation can and will break when presented with noncreatable Instances such as Path (which is created by PathService:CreateAsync())
+
+					return (not IsService or not Output) and Methods.Instance(ObjectParent)..":WaitForChild("..ObjectName..")" or Services[ObjectClassName] or "game:GetService(\""..ObjectClassName.."\")"
+				elseif ObjectClassName == "Model" then
+					local Player = Players:GetPlayerFromCharacter(obj)
+
+					return not Player and Methods.Instance(ObjectParent)..":WaitForChild("..ObjectName..")" or "game:GetService(\"Players\"):WaitForChild("..ObjectName..").Character"
+				end
+
+				return "game:GetService(\"Players\"):WaitForChild("..ObjectName..")"
+			end
+
+			return ObjectClassName == "DataModel" and "game" or "Instance.new(\""..ObjectClassName.."\", nil)"
+		end
 	end
+
+	Class.Services = Services
 end
 
 function DefaultMethods.NumberRange(Range : NumberRange)
@@ -560,18 +382,20 @@ function DefaultMethods.NumberSequence(Sequence : NumberSequence)
 	return "NumberSequence.new({"..Serialized..SerializeNumberSequenceKeypoint(Keypoints[Size]).."})"
 end
 
-local DefaultOverlapParams = OverlapParams.new()
-function DefaultMethods.OverlapParams(Params : OverlapParams, format : boolean?, indents : string)
-	if DefaultOverlapParams ~= Params then
-		local formatspace = format and "\n"..indents or " "
-		local FilterDescendantsInstances = Params.FilterDescendantsInstances
-		local FilterType = Params.FilterType
-		local CollisionGroup = Params.CollisionGroup
+do
+	local DefaultOverlapParams = OverlapParams.new()
+	function DefaultMethods.OverlapParams(Params : OverlapParams, format : boolean?, indents : string)
+		if DefaultOverlapParams ~= Params then
+			local formatspace = format and "\n"..indents or " "
+			local FilterDescendantsInstances = Params.FilterDescendantsInstances
+			local FilterType = Params.FilterType
+			local CollisionGroup = Params.CollisionGroup
 
-		return "(function(Param : OverlapParams)"..formatspace..(#FilterDescendantsInstances > 0 and "\tParam.FilterDescendantsInstances = "..Methods.table(FilterDescendantsInstances, false, "")..formatspace or "")..(FilterType ~= Enum.RaycastFilterType.Exclude and "\tParam.FilterType = Enum.RaycastFilterType."..FilterType.Name..formatspace or "")..(CollisionGroup ~= "Default" and "\tParam.CollisionGroup = "..Methods.string(CollisionGroup)..formatspace or "")..(Params.RespectCanCollide and "\tParam.RespectCanCollide = true"..formatspace or "")..(Params.BruteForceAllSlow and "\tParam.BruteForceAllSlow = true"..formatspace or "").."\treturn Params"..formatspace.."end)(OverlapParams.new())"
+			return "(function(Param : OverlapParams)"..formatspace..(#FilterDescendantsInstances > 0 and "\tParam.FilterDescendantsInstances = "..Methods.table(FilterDescendantsInstances, false, "")..formatspace or "")..(FilterType ~= Enum.RaycastFilterType.Exclude and "\tParam.FilterType = Enum.RaycastFilterType."..FilterType.Name..formatspace or "")..(CollisionGroup ~= "Default" and "\tParam.CollisionGroup = "..Methods.string(CollisionGroup)..formatspace or "")..(Params.RespectCanCollide and "\tParam.RespectCanCollide = true"..formatspace or "")..(Params.BruteForceAllSlow and "\tParam.BruteForceAllSlow = true"..formatspace or "").."\treturn Params"..formatspace.."end)(OverlapParams.new())"
+		end
+
+		return "OverlapParams.new()"
 	end
-
-	return "OverlapParams.new()"
 end
 
 function DefaultMethods.NumberSequenceKeypoint(Keypoint : NumberSequenceKeypoint)
@@ -584,8 +408,14 @@ function DefaultMethods.PathWaypoint(Waypoint : PathWaypoint)
 	return "PathWaypoint.new("..Methods.Vector3(Waypoint.Position)..", Enum.PathWaypointAction."..Waypoint.Action.Name..", "..Methods.string(Waypoint.Label)..")"
 end
 
-function DefaultMethods.PhysicalProperties(Properties : PhysicalProperties)
-	return "PhysicalProperties.new("..(nanToString(Properties.Density))..", "..nanToString(Properties.Friction)..", "..nanToString(Properties.Elasticity)..", "..nanToString(Properties.FrictionWeight)..", "..nanToString(Properties.ElasticityWeight)..")"
+do
+	local function nanToString(int : number)
+		return int == int and int or "0/0"
+	end
+
+	function DefaultMethods.PhysicalProperties(Properties : PhysicalProperties)
+		return "PhysicalProperties.new("..(nanToString(Properties.Density))..", "..nanToString(Properties.Friction)..", "..nanToString(Properties.Elasticity)..", "..nanToString(Properties.FrictionWeight)..", "..nanToString(Properties.ElasticityWeight)..")"
+	end
 end
 
 function DefaultMethods.RBXScriptConnection(Connection : RBXScriptConnection, _, _, _, InComment : boolean?)
@@ -594,11 +424,38 @@ function DefaultMethods.RBXScriptConnection(Connection : RBXScriptConnection, _,
 	return "(nil --["..CommentSeperator.."[ RBXScriptConnection | IsConnected: "..(Connection.Connected and "true" or "false").." ]"..CommentSeperator.."])" -- Can't support this
 end
 
-function DefaultMethods.RBXScriptSignal(Signal : RBXScriptSignal, _, _, _, InComment : boolean?)
-	local CommentSeperator = not InComment and "" or "="
-	local SignalName = tostring(Signal):match("Signal (%a+)")
+do
+	local Signals = { -- You theoretically could serialize the api to retrieve most of the Signals but I don't believe that its worth it
+		GraphicsQualityChangeRequest = "game.GraphicsQualityChangeRequest",
+		AllowedGearTypeChanged = "game.AllowedGearTypeChanged",
+		ScreenshotSavedToAlbum = "game.ScreenshotSavedToAlbum",
+		UniverseMetadataLoaded = "game.UniverseMetadataLoaded",
+		ScreenshotReady = "game.ScreenshotReady",
+		ServiceRemoving = "game.ServiceRemoving",
+		ServiceAdded = "game.ServiceAdded",
+		ItemChanged = "game.ItemChanged",
+		CloseLate = "game.CloseLate",
+		Loaded = "game.Loaded",
+		Close = "game.Close",
 
-	return Signals[SignalName] or "(nil --["..CommentSeperator.."[ RBXScriptSignal | "..SignalName.." is not supported ]"..CommentSeperator.."])"
+		RobloxGuiFocusedChanged = "game:GetService(\"RunService\").RobloxGuiFocusedChanged",
+		PostSimulation = "game:GetService(\"RunService\").PostSimulation",
+		RenderStepped = "game:GetService(\"RunService\").RenderStepped",
+		PreSimulation = "game:GetService(\"RunService\").PreSimulation",
+		PreAnimation = "game:GetService(\"RunService\").PreAnimation",
+		PreRender = "game:GetService(\"RunService\").PreRender",
+		Heartbeat = "game:GetService(\"RunService\").Heartbeat",
+		Stepped = "game:GetService(\"RunService\").Stepped"
+	}
+
+	function DefaultMethods.RBXScriptSignal(Signal : RBXScriptSignal, _, _, _, InComment : boolean?)
+		local CommentSeperator = not InComment and "" or "="
+		local SignalName = tostring(Signal):match("Signal (%a+)")
+
+		return Signals[SignalName] or "(nil --["..CommentSeperator.."[ RBXScriptSignal | "..SignalName.." is not supported ]"..CommentSeperator.."])"
+	end
+
+	Class.Signals = Signals
 end
 
 function DefaultMethods.Random(_, _, _, _, InComment : boolean?) -- Random cant be supported because I cant get the seed
@@ -613,18 +470,20 @@ function DefaultMethods.Ray(Ray : Ray)
 	return "Ray.new("..SerializeVector3(Ray.Origin)..", "..SerializeVector3(Ray.Direction)..")"
 end
 
-local DefaultRaycastParams = RaycastParams.new()
-function DefaultMethods.RaycastParams(Params : RaycastParams, format : boolean?, indents : string)
-	if DefaultRaycastParams ~= Params then
-		local formatspace = format and "\n"..indents or " "
-		local FilterDescendantsInstances = Params.FilterDescendantsInstances
-		local FilterType = Params.FilterType
-		local CollisionGroup = Params.CollisionGroup
+do
+	local DefaultRaycastParams = RaycastParams.new()
+	function DefaultMethods.RaycastParams(Params : RaycastParams, format : boolean?, indents : string)
+		if DefaultRaycastParams ~= Params then
+			local formatspace = format and "\n"..indents or " "
+			local FilterDescendantsInstances = Params.FilterDescendantsInstances
+			local FilterType = Params.FilterType
+			local CollisionGroup = Params.CollisionGroup
 
-		return "(function(Param : RaycastParams)"..formatspace..(#FilterDescendantsInstances > 0 and "\tParam.FilterDescendantsInstances = "..Methods.table(FilterDescendantsInstances, false, "")..formatspace or "")..(FilterType ~= Enum.RaycastFilterType.Exclude and "\tParam.FilterType = Enum.RaycastFilterType."..FilterType.Name..formatspace or "")..(Params.IgnoreWater and "\tParam.IgnoreWater = true"..formatspace or "")..(CollisionGroup ~= "Default" and "\tParam.CollisionGroup = "..Methods.string(CollisionGroup)..formatspace or "")..(Params.RespectCanCollide and "\tParam.RespectCanCollide = true"..formatspace or "")..(Params.BruteForceAllSlow and "\tParam.BruteForceAllSlow = true"..formatspace or "").."\treturn Params"..formatspace.."end)(RaycastParams.new())"
+			return "(function(Param : RaycastParams)"..formatspace..(#FilterDescendantsInstances > 0 and "\tParam.FilterDescendantsInstances = "..Methods.table(FilterDescendantsInstances, false, "")..formatspace or "")..(FilterType ~= Enum.RaycastFilterType.Exclude and "\tParam.FilterType = Enum.RaycastFilterType."..FilterType.Name..formatspace or "")..(Params.IgnoreWater and "\tParam.IgnoreWater = true"..formatspace or "")..(CollisionGroup ~= "Default" and "\tParam.CollisionGroup = "..Methods.string(CollisionGroup)..formatspace or "")..(Params.RespectCanCollide and "\tParam.RespectCanCollide = true"..formatspace or "")..(Params.BruteForceAllSlow and "\tParam.BruteForceAllSlow = true"..formatspace or "").."\treturn Params"..formatspace.."end)(RaycastParams.new())"
+		end
+
+		return "RaycastParams.new()"
 	end
-
-	return "RaycastParams.new()"
 end
 
 function DefaultMethods.Rect(Rect : Rect)
@@ -717,32 +576,178 @@ function DefaultMethods.buffer(buff : buffer)
 	return "buffer.fromstring("..Methods.string(bufftostring(buff))..")"
 end
 
-DefaultMethods["function"] = function(Function : (...any?) -> ...any?, format : boolean?, indents : string, _, InComment : boolean?)
-	local IsGlobal = GlobalFunctions[Function]
+do
+	local GlobalFunctions = {} do
+		local getrenv = getrenv or (function() -- support for studio executors
+			local env = { -- I could be missing a couple libraries
+				bit32 = bit32,
+				buffer = buffer,
+				coroutine = coroutine,
+				debug = debug,
+				math = math,
+				os = os,
+				string = string,
+				table = table,
+				utf8 = utf8,
+				Content = Content,
+				Axes = Axes,
+				AdReward = AdReward, --Empty
+				BrickColor = BrickColor,
+				CatalogSearchParams = CatalogSearchParams,
+				CFrame = CFrame,
+				Color3 = Color3,
+				ColorSequence = ColorSequence,
+				ColorSequenceKeypoint = ColorSequenceKeypoint,
+				DateTime = DateTime,
+				DockWidgetPluginGuiInfo = DockWidgetPluginGuiInfo,
+				Faces = Faces,
+				FloatCurveKey = FloatCurveKey,
+				Font = Font,
+				Instance = Instance,
+				NumberRange = NumberRange,
+				NumberSequence = NumberSequence,
+				NumberSequenceKeypoint = NumberSequenceKeypoint,
+				OverlapParams = OverlapParams,
+				PathWaypoint = PathWaypoint,
+				PhysicalProperties = PhysicalProperties,
+				Random = Random,
+				Ray = Ray,
+				RaycastParams = RaycastParams,
+				Rect = Rect,
+				Region3 = Region3,
+				Region3int16 = Region3int16,
+				RotationCurveKey = RotationCurveKey,
+				SharedTable = SharedTable,
+				task = task,
+				TweenInfo = TweenInfo,
+				UDim = UDim,
+				UDim2 = UDim2,
+				Vector2 = Vector2,
+				Vector2int16 = Vector2int16,
+				Vector3 = Vector3,
+				vector = vector,
+				Vector3int16 = Vector3int16,
+				CellId = CellId, -- Undocumented
+				PluginDrag = PluginDrag,
+				SecurityCapabilities = SecurityCapabilities,
 
-	if not IsGlobal then
-		if format then
-			local SerializeString = Methods.string
+				assert = assert,
+				error = error,
+				getfenv = getfenv,
+				getmetatable = getmetatable,
+				ipairs = ipairs,
+				loadstring = loadstring,
+				newproxy = newproxy,
+				next = next,
+				pairs = pairs,
+				pcall = pcall,
+				print = print,
+				rawequal = rawequal,
+				rawget = rawget,
+				rawlen = rawlen,
+				rawset = rawset,
+				select = select,
+				setfenv = setfenv,
+				setmetatable = setmetatable,
+				tonumber = tonumber,
+				tostring = tostring,
+				unpack = unpack,
+				xpcall = xpcall,
+				collectgarbage = collectgarbage,
+				delay = delay,
+				gcinfo = gcinfo,
+				PluginManager = PluginManager,
+				DebuggerManager = DebuggerManager,
+				require = require,
+				settings = settings,
+				spawn = spawn,
+				tick = tick,
+				time = time,
+				UserSettings = UserSettings,
+				wait = wait,
+				warn = warn,
+				Delay = Delay,
+				ElapsedTime = ElapsedTime,
+				elapsedTime = elapsedTime,
+				printidentity = printidentity,
+				Spawn = Spawn,
+				Stats = Stats,
+				stats = stats,
+				Version = Version,
+				version = version,
+				Wait = Wait
+			}
 
-			local CommentSeperator = not InComment and "" or "="
-			local tempindents = indents.."\t\t\t"
-			local newlineindent = ",\n"..tempindents
-			local source, line, name, numparams, vargs = info(Function, "slna")
+			return function()
+				return env
+			end
+		end)()
 
-			return "function()"..(line ~= -1 and "" or " --["..CommentSeperator.."[ CClosure "..(info(Function, "n")).." ]"..CommentSeperator.."]").."\n\t"..indents.."--["..CommentSeperator.."[\n\t\t"..indents.."info = {\n"..tempindents.."source = "..SerializeString(source)..newlineindent.."line = "..line..newlineindent.."what = "..(line ~= -1 and "\"Lua\"" or "\"C\"")..newlineindent.."name = "..SerializeString(name)..newlineindent.."numparams = "..numparams..newlineindent.."vargs = "..(vargs and "true" or "false")..newlineindent.."function = "..tostring(Function).."\n\t\t"..indents.."}\n\t"..indents.."]"..CommentSeperator.."]\n"..indents.."end"
+		local Visited = setmetatable({}, {__mode = "k"}) -- support for people who actually modify the roblox env
+
+		for i,v in getrenv() do
+			local ElementType = type(i) == "string" and type(v) -- I'm not supporting numbers
+
+			if ElementType then
+				if ElementType == "table" then
+					local function LoadLibrary(Path : string, tbl : {[string] : any})
+						if not Visited[tbl] then
+							Visited[tbl] = true
+
+							for i,v in next, tbl do
+								local Type = type(i) == "string" and not Keywords[i] and i:match("[A-z_][A-z_0-9]") and type(v)
+								local NewPath = Type and (Type == "function" or Type == "table") and Path.."."..i
+
+								if NewPath then
+									if Type == "function" then
+										GlobalFunctions[v] = NewPath
+									else
+										LoadLibrary(NewPath, v)
+									end
+								end
+							end
+
+							Visited[tbl] = nil
+						end
+					end
+
+					LoadLibrary(i, v)
+					table.clear(Visited)
+				elseif ElementType == "function" then
+					GlobalFunctions[v] = i
+				end
+			end
 		end
 
-		return islclosure(Function) and "function() end" or "function() --["..(not InComment and "" or "=").."[ CClosure "..(info(Function, "n")).." ]"..(not InComment and "" or "=").."] end" -- shouldn't really ever be possible unless lego hax newcclosure
+		Class.GlobalFunctions = GlobalFunctions
 	end
 
-	return IsGlobal
+	DefaultMethods["function"] = function(Function : (...any?) -> ...any?, format : boolean?, indents : string, _, InComment : boolean?)
+		local IsGlobal = GlobalFunctions[Function]
+
+		if not IsGlobal then
+			if format then
+				local SerializeString = Methods.string
+
+				local CommentSeperator = not InComment and "" or "="
+				local tempindents = indents.."\t\t\t"
+				local newlineindent = ",\n"..tempindents
+				local source, line, name, numparams, vargs = info(Function, "slna")
+
+				return "function()"..(line ~= -1 and "" or " --["..CommentSeperator.."[ CClosure "..name.." ]"..CommentSeperator.."]").."\n\t"..indents.."--["..CommentSeperator.."[\n\t\t"..indents.."info = {\n"..tempindents.."source = "..SerializeString(source)..newlineindent.."line = "..line..newlineindent.."what = "..(line ~= -1 and "\"Lua\"" or "\"C\"")..newlineindent.."name = "..SerializeString(name)..newlineindent.."numparams = "..numparams..newlineindent.."vargs = "..(vargs and "true" or "false")..newlineindent.."function = "..tostring(Function).."\n\t\t"..indents.."}\n\t"..indents.."]"..CommentSeperator.."]\n"..indents.."end"
+			end
+
+			return islclosure(Function) and "function() end" or "function() --["..(not InComment and "" or "=").."[ CClosure "..(info(Function, "n")).." ]"..(not InComment and "" or "=").."] end" -- shouldn't really ever be possible unless lego hax newcclosure
+		end
+
+		return IsGlobal
+	end
 end
 
 function DefaultMethods.table(tbl : {[any] : any}, format : boolean?, indents : string, CyclicList : typeof(setmetatable({}, {__mode = "k"}))?, InComment : boolean?)
 	local CyclicList = CyclicList or setmetatable({}, {__mode = "k"})
 
 	if not CyclicList[tbl] then
-		CyclicList[tbl] = true 
 		local isreadonly = isfrozen(tbl)
 		local Index, Value = next(tbl)
 
@@ -751,15 +756,16 @@ function DefaultMethods.table(tbl : {[any] : any}, format : boolean?, indents : 
 			local Ending = (format and ",\n" or ", ")
 			local formatspace = format and "\n" or ""
 			local Generation = "{"..formatspace
-
 			local CurrentIndex = 1
-
+			
+			CyclicList[tbl] = true
 			repeat
 				Generation ..= Indents..(CurrentIndex ~= Index and ValidateIndex(Index) or "")..Serialize(Value, format, Indents, CyclicList, InComment)
 				Index, Value = next(tbl, Index)
 				Generation ..= Index ~= nil and Ending or formatspace..indents.."}"
 				CurrentIndex += 1
 			until Index == nil
+			CyclicList[tbl] = nil
 
 			return not isreadonly and Generation or "table.freeze("..Generation..")"
 		end
@@ -770,7 +776,7 @@ function DefaultMethods.table(tbl : {[any] : any}, format : boolean?, indents : 
 	end
 end
 
-DefaultMethods["nil"] = function() -- why not
+DefaultMethods["nil"] = function()
 	return "nil"
 end
 
@@ -778,32 +784,30 @@ function DefaultMethods.number(num : number)
 	return num ~= inf and num ~= neginf and num == num and tostring(num) or num == inf and (Class.__Serializeinf and "math.huge" or "1/0") or num == neginf and (Class.__Serializeinf and "-math.huge" or "-1/0") or "0/0"
 end
 
-function DefaultMethods.string(RawString : string)
-	return "\""..RawString:gsub("[\0-\31\34\92\127-\255]", ByteList).."\""
-	--[[
-	--Old way of doing it (I wasnt aware you could do \0xx / \00x for bytes)
-	local RawStringBuffer = fromstring(RawString)
-	local SerializedString = ""
-	local Lastunicode = false
+do
+	local ByteList = {
+		["\a"] = "\\a",
+		["\b"] = "\\b",
+		["\t"] = "\\t",
+		["\n"] = "\\n",
+		["\v"] = "\\v",
+		["\f"] = "\\f",
+		["\r"] = "\\r",
+		["\""] = "\\\"",
+		["\\"] = "\\\\"
+	}
 
-	for i = 0, #RawString-1 do
-		local Byte = readu8(RawStringBuffer, i)
+	for i = 0, 255 do
+		local Character = string.char(i)
 
-		if (Byte >= 32 and Byte <= 126) then
-			local IsNumber = (Byte >= 48 and Byte <= 57)
-
-			SerializedString ..= Lastunicode and IsNumber and "\"..\""..(Byte-48) or not IsNumber and ReadableCharacters[Byte] or Byte-48
-			Lastunicode = false
-		else
-			local IsUnicode = Byte < 7 or Byte > 13
-
-			SerializedString ..= IsUnicode and "\\"..Byte or SpecialCases[Byte]
-			Lastunicode = IsUnicode
+		if not ByteList[Character] and (i < 32 or i > 126) then
+			ByteList[Character] = ("\\%03d"):format(i)
 		end
 	end
 
-	return "\""..SerializedString.."\""
-	]]
+	function DefaultMethods.string(RawString : string)
+		return "\""..RawString:gsub("[\0-\31\34\92\127-\255]", ByteList).."\""
+	end
 end
 
 function DefaultMethods.thread(thread : thread)
@@ -814,19 +818,21 @@ function DefaultMethods.userdata(userdata : any)
 	return getmetatable(userdata) ~= nil and "newproxy(true)" or "newproxy(false)"
 end
 
-local SecurityCapabilityEnums = Enum.SecurityCapability:GetEnumItems()
-function DefaultMethods.SecurityCapabilities(Capabilities : SecurityCapabilities, format : boolean?, _, _, InComment : boolean?)
-	local Contains = {}
-	local CurrentIndex = 1
+do
+	local SecurityCapabilityEnums = Enum.SecurityCapability:GetEnumItems()
+	function DefaultMethods.SecurityCapabilities(Capabilities : SecurityCapabilities, format : boolean?, _, _, InComment : boolean?)
+		local Contains = {}
+		local CurrentIndex = 1
 
-	for i,v in SecurityCapabilityEnums do
-		if Capabilities:Contains(v) then
-			Contains[CurrentIndex] = "Enum.SecurityCapability."..v.Name
-			CurrentIndex += 1
+		for i,v in SecurityCapabilityEnums do
+			if Capabilities:Contains(v) then
+				Contains[CurrentIndex] = "Enum.SecurityCapability."..v.Name
+				CurrentIndex += 1
+			end
 		end
-	end
 
-	return "SecurityCapabilities.new("..concat(Contains, ", ")..")"
+		return "SecurityCapabilities.new("..concat(Contains, ", ")..")"
+	end
 end
 
 function DefaultMethods.PluginDrag(Drag : PluginDrag)
@@ -835,8 +841,10 @@ function DefaultMethods.PluginDrag(Drag : PluginDrag)
 	return "PluginDrag.new("..SerializeString(Drag.Sender)..", "..SerializeString(Drag.MimeType)..", "..SerializeString(Drag.Data)..", "..SerializeString(Drag.MouseIcon)..", "..SerializeString(Drag.DragIcon)..", "..Methods.Vector2(Drag.HotSpot)..")"
 end
 
-function DefaultMethods.CellId()
-	return "CellId.new()" -- Undocumented so I have no idea what the properties are
+function DefaultMethods.CellId(_, _, _, _, InComment : boolean?)
+	local Comment = (InComment and "=" or "")
+    
+    return "CellId.new(--["..Comment.."[ Undocumented ]"..Comment.."])" -- Undocumented so I have no idea what the properties are
 end
 
 local function Serializevargs(... : any)
@@ -856,50 +864,6 @@ local function Serializevargs(... : any)
 	return unpack(tbl, 1, tbl.n)
 end
 
-Class.Methods = setmetatable(Methods, {
-	__index = getmetatable(Methods).__index,
-	__newindex = function(self, index : string, newindex : ((...any?) -> (...any?))?)
-		assert(type(index) == "string" and (not newindex or type(newindex) == "function"), "Methods.index<string> = newindex<function?> expected, got: Methods.index<"..typeof(index).."> = newindex<"..typeof(newindex)..">")
-		rawset(self, index, newindex)
-	end
-})
-
-Class.Signals = setmetatable(Signals, {
-	__newindex = function(self, index : string, newindex : string?)
-		assert(type(index) == "string" and (not newindex or type(newindex) == "string"), "Signals.index<string> = newindex<string?> expected, got: Signals.index<"..typeof(index).."> = newindex<"..typeof(newindex)..">")
-		rawset(self, index, newindex)
-	end
-})
-
-Class.Services = setmetatable(Services, {
-	__newindex = function(self, index : string, newindex : string?)
-		assert(type(index) == "string" and (not newindex or type(newindex) == "string"), "Services.index<string> = newindex<string?> expected, got: Services.index<"..typeof(index).."> = newindex<"..typeof(newindex)..">")
-		rawset(self, index, newindex)
-	end
-})
-
-Class.GlobalFunctions = setmetatable(GlobalFunctions, {
-	__newindex = function(self, index : string, newindex : (...any?) -> ()?)
-		assert(type(index) == "string" and (not newindex or type(newindex) == "function"), "GlobalFunctions.index<string> = newindex<function> expected, got: GlobalFunctions.index<"..typeof(index).."> = newindex<"..typeof(newindex)..">")
-		rawset(self, index, newindex)
-	end
-})
-
-Class.DefaultTypes = {
-	Vector3 = setmetatable(DefaultVectors, {
-		__newindex = function(self, index : Vector3, newindex : string?)
-			assert(type(index) == "vector" and (not newindex or type(newindex) == "string"), "DefaultTypes.Vector3.index<Vector3> = newindex<string?> expected, got: DefaultTypes.Vector3.index<"..typeof(index).."> = newindex<"..typeof(newindex)..">")
-			rawset(self, index, newindex)
-		end
-	}),
-	CFrame = setmetatable(DefaultCFrames, {
-		__newindex = function(self, index : CFrame, newindex : string?)
-			assert(typeof(index) == "CFrame" and (not newindex or type(newindex) == "string"), "DefaultTypes.CFrame.index<CFrame> = newindex<string?> expected, got: DefaultTypes.CFrame.index<"..typeof(index).."> = newindex<"..typeof(newindex)..">")
-			rawset(self, index, newindex)
-		end
-	})
-}
-
 -- Safe parallel
 function Class.Convert<Type>(DataStructure : Type, format : boolean?)
 	return Serialize(DataStructure, format, "")
@@ -918,6 +882,14 @@ end
 -- Safe Parallel
 function Class.warn(... : any?)
 	warn(Serializevargs(...))
+end
+
+if type(setclipboard) == "function" then
+	local setclipboard = setclipboard
+	-- Safe Parallel
+	function Class.setclipboard<Type>(DataStructure : Type, format : boolean?)
+		setclipboard(Serialize(DataStructure, format, ""))
+	end
 end
 
 return setmetatable(Class, {

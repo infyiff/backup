@@ -3,6 +3,8 @@
 --infyiff.github.io
 --discord.gg/78ZuWSq
 
+-- old source: https://pastebin.com/raw/MjBzRjmT
+
 local GUI = Instance.new("ScreenGui")
 local AnnGUI = Instance.new("Frame")
 local background = Instance.new("Frame")

@@ -1,4 +1,3 @@
-local getinfo = getinfo or (debug and debug.getinfo)
 local setthreadidentity = setthreadidentity or (syn and syn.set_thread_identity) or syn_context_set or setthreadcontext
 local getgc = getgc or get_gc_objects
 local hk = {}

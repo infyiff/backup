@@ -1349,10 +1349,21 @@ local EmbeddedModules = {
 				
 				context:Register("SAVE_INST",{Name = "Save to File", IconMap = Explorer.MiscIcons, Icon = "Save", OnClick = function()
 					local sList = selection.List
-					if not saveinstance then return end
-							
+					if not saveinstance or not isfile then return end
+					
 					for i = 1, #sList do
-						saveinstance({Object = sList[i].Obj})
+						local obj = sList[i].Obj
+						local filenum = 0
+						local function nameFile()
+							local fileName = game.PlaceId .. " " .. obj.Name .. " " .. filenum
+							if isfile(fileName..".rbxmx") then
+								filenum = filenum + 1
+								nameFile()
+							else
+								saveinstance({Object = obj, FilePath = fileName})
+							end
+						end
+						nameFile()
 					end
 				end})
 

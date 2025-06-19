@@ -930,7 +930,7 @@ local EmbeddedModules = {
 				if expanded == Explorer.SearchExpanded then context:AddRegistered("CLEAR_SEARCH_AND_JUMP_TO") end
 				if env.setclipboard then context:AddRegistered("COPY_PATH") end
 				context:AddRegistered("INSERT_OBJECT")
-				-- context:AddRegistered("SAVE_INST")
+				context:AddRegistered("SAVE_INST")
 				-- context:AddRegistered("CALL_FUNCTION")
 				-- context:AddRegistered("VIEW_CONNECTIONS")
 				-- context:AddRegistered("GET_REFERENCES")
@@ -1346,6 +1346,26 @@ local EmbeddedModules = {
 					local x,y = Explorer.LastRightClickX or mouse.X, Explorer.LastRightClickY or mouse.Y
 					Explorer.InsertObjectContext:Show(x,y)
 				end})
+				
+				context:Register("SAVE_INST",{Name = "Save to File", IconMap = Explorer.MiscIcons, Icon = "Save", OnClick = function()
+					local sList = selection.List
+					if not saveinstance or not isfile then return end
+					
+					for i = 1, #sList do
+						local obj = sList[i].Obj
+						local filenum = 0
+						local function nameFile()
+							local fileName = game.PlaceId .. " " .. obj.Name .. " " .. filenum
+							if isfile(fileName..".rbxmx") then
+								filenum = filenum + 1
+								nameFile()
+							else
+								saveinstance({Object = obj, FilePath = fileName})
+							end
+						end
+						nameFile()
+					end
+				end})
 
 				--[[context:Register("CALL_FUNCTION",{Name = "Call Function", IconMap = Explorer.ClassIcons, Icon = 66, OnClick = function()
 
@@ -1355,9 +1375,6 @@ local EmbeddedModules = {
 
 				end})
 
-				context:Register("SAVE_INST",{Name = "Save to File", IconMap = Explorer.MiscIcons, Icon = "Save", OnClick = function()
-
-				end})
 
                 context:Register("VIEW_CONNECTIONS",{Name = "View Connections", OnClick = function()
                     

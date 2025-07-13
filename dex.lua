@@ -11832,7 +11832,7 @@ Main = (function()
 		-- other
 		--env.setfflag = missing("function", setfflag)
 		env.request = missing("function", request or http_request or (syn and syn.request) or (http and http.request) or (fluxus and fluxus.request))
-		env.decompile = missing("function", env.decompile) or (env.getscriptbytecode and env.request and (function()
+		env.decompile = missing("function", decompile) or (env.getscriptbytecode and env.request and (function()
 			local success, err = pcall(function()
 				loadstring(oldgame:HttpGet("https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/konstant.lua"))()
 			end)

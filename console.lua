@@ -15,14 +15,15 @@ local AnalyticsCategory_Game = "Game"
 local AnalyticsAction_InitialOpenTab = "DeveloperConsole_InitialOpenTab"
 local AnalyticsAction_ClickToOpenOpenTab = "DeveloperConsole_ClickToOpenOpenTab"
 
-local CoreGui = game:GetService("CoreGui")
-local RobloxGui = CoreGui:FindFirstChild("RobloxGui")
-local Modules = RobloxGui:FindFirstChild("Modules")
+local cloneref = cloneref or function(a) return a end
+local CoreGui = cloneref(game:GetService("CoreGui"))
+local RobloxGui = cloneref(CoreGui:FindFirstChild("RobloxGui"))
+local Modules = cloneref(RobloxGui:FindFirstChild("Modules"))
 
-local ContextActionService = game:GetService("ContextActionService")
-local TextService = game:GetService("TextService")
-local GuiService = game:GetService("GuiService")
-local VRService = game:GetService("VRService")
+local ContextActionService = cloneref(game:GetService("ContextActionService"))
+local TextService = cloneref(game:GetService("TextService"))
+local GuiService = cloneref(game:GetService("GuiService"))
+local VRService = cloneref(game:GetService("VRService"))
 local isTenFootInterface = GuiService:IsTenFootInterface()
 
 local ClientMemoryAnalyzerClass = require(CoreGui:WaitForChild("RobloxGui"):WaitForChild("Modules"):WaitForChild("Stats"):WaitForChild("ClientMemoryAnalyzer"))
@@ -36,7 +37,7 @@ local Style; do
 	local optionsFrameColor = Color3.new(1, 1, 1)
 	
 	pcall(function() -- Fun window colors for cool people
-		local Players = game:GetService("Players")
+		local Players = cloneref(game:GetService("Players"))
 		if not Players or not Players.LocalPlayer then
 			return
 		end
@@ -305,8 +306,8 @@ local CreateDisconnectSignal; do
 end
 
 -- Services
-local UserInputService = game:GetService('UserInputService')
-local RunService = game:GetService('RunService')
+local UserInputService = cloneref(game:GetService('UserInputService'))
+local RunService = cloneref(game:GetService('RunService'))
 local TouchEnabled = UserInputService.TouchEnabled
 
 local DeveloperConsole = {}
@@ -965,8 +966,8 @@ do -- This doesn't support multiple windows very well
 		
 		local enabled = false
 		
-		local mouse = game:GetService("Players").LocalPlayer:GetMouse()
-		
+		local mouse = cloneref(cloneref(game:GetService("Players")).LocalPlayer:GetMouse())
+			
 		local function Refresh()
 			local enabledNew = devConsole.Visible and not UserInputService.MouseIconEnabled
 			if enabledNew == enabled then
@@ -1901,7 +1902,7 @@ function Methods.ConnectButtonDragging(devConsole, button, dragCallback, mouseIn
 		[Enum.UserInputType.Touch] = true; -- I'm not sure if touch actually works here
 	}
 	
-	local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+	local mouse = cloneref(cloneref(game:GetService("Players")).LocalPlayer:GetMouse())
 
 	local function startDragging(startP)
 		if dragging then
@@ -1997,15 +1998,15 @@ do
 		permissions.IsCreator = false
 
 		local success, result = pcall(function()
-			local url = string.format("/users/%d/canmanage/%d", game:GetService("Players").LocalPlayer.UserId, game.PlaceId)
-			return game:GetService('HttpRbxApiService'):GetAsync(url, Enum.ThrottlingPriority.Default, Enum.HttpRequestType.Default, true)
+			local url = string.format("/users/%d/canmanage/%d", cloneref(game:GetService("Players")).LocalPlayer.UserId, game.PlaceId)
+			return cloneref(game:GetService('HttpRbxApiService')):GetAsync(url, Enum.ThrottlingPriority.Default, Enum.HttpRequestType.Default, true)
 		end)
 		if success and type(result) == "string" then
 			-- API returns: {"Success":BOOLEAN,"CanManage":BOOLEAN}
 			-- Convert from JSON to a table
 			-- pcall in case of invalid JSON
 			success, result = pcall(function()
-				return game:GetService('HttpService'):JSONDecode(result)
+				return cloneref(game:GetService('HttpService')):JSONDecode(result)
 			end)
 			if success and result.CanManage == true then
 				permissions.IsCreator = result.CanManage
@@ -2130,7 +2131,7 @@ do
 			outputMessageSyncLocal = NewOutputMessageSync(function(this)
 				local messages = {}
 				
-				local LogService = game:GetService("LogService")
+				local LogService = cloneref(game:GetService("LogService"))
 				do -- This do block keeps history from sticking around in memory
 					local history = LogService:GetLogHistory()
 					for i = 1, #history do
@@ -2167,7 +2168,7 @@ do
 			outputMessageSyncServer = NewOutputMessageSync(function(this)
 				local messages = {}
 				
-				local LogService = game:GetService("LogService")
+				local LogService = cloneref(game:GetService("LogService"))
 				
 				LogService.ServerMessageOut:connect(function(text, messageType, timestamp)
 					local message = {
@@ -2316,7 +2317,7 @@ local function SetCoreConsoleCreation()
 	end)
 end
 
-local StarterGui = game:GetService("StarterGui")
+local StarterGui = cloneref(game:GetService("StarterGui"))
 local function GetDeveloperConsoleVisible()
 	if (not myDeveloperConsole) then
 		SetCoreConsoleCreation()
@@ -2340,8 +2341,8 @@ local function DeveloperConsoleVisible(visible)
 end
 
 -- BetterConsole.lua by Josh#0903
-local InputService  = game:GetService'UserInputService'
-local StarterGui    = game:GetService'StarterGui'
+local InputService  = cloneref(game:GetService'UserInputService')
+local StarterGui    = cloneref(game:GetService'StarterGui')
 
 InputService.InputBegan:connect(function(a)
    if a.UserInputType == Enum.UserInputType.Keyboard and a.KeyCode == Enum.KeyCode.F9 then

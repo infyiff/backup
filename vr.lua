@@ -3,8 +3,9 @@
 
 --[[---------Settings---------]]--
 local game = game
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local cloneref = cloneref or function(a) return a end
+local Players = cloneref(game:GetService("Players"))
+local RunService = cloneref(game:GetService("RunService"))
 local sethidden = sethiddenproperty or set_hidden_property or set_hidden_prop
 coroutine.wrap(function()
     while wait() do
@@ -277,7 +278,7 @@ Script = function()
     local WeldBase = Character:WaitForChild("HumanoidRootPart")
     local ArmBase = Character:FindFirstChild("RightHand") or Character:FindFirstChild("Right Arm") or WeldBase
     local Backpack = Client:WaitForChild("Backpack")
-    local Mouse = Client:GetMouse()
+    local Mouse = cloneref(Client:GetMouse())
     local Camera = workspace.CurrentCamera
     local VRService = game:GetService("VRService")
     local VRReady = VRService.VREnabled
@@ -1387,7 +1388,7 @@ ViewHUDFunc = function()
     local VRReady = VRService.VREnabled
     local Players = game:GetService("Players")
     local Client = Players.LocalPlayer
-    local Mouse = Client:GetMouse()
+    local Mouse = cloneref(Client:GetMouse())
     local Camera = workspace.CurrentCamera
     local CameraPort = Camera.CFrame
     local ViewHUD = script:FindFirstChild("ViewHUD") or game:GetObjects("rbxassetid://4480405425")[1]

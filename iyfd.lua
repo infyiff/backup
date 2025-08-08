@@ -13,8 +13,9 @@ local shadow = Instance.new("Frame")
 local PopupText = Instance.new("TextLabel")
 local Exit = Instance.new("TextButton")
 local ExitImage = Instance.new("ImageLabel")
+local cloneref = cloneref or function(a) return a end
 
-GUI.Parent = game:GetService("CoreGui")
+GUI.Parent = cloneref(game:GetService("CoreGui"))
 
 AnnGUI.Name = "AnnGUI"
 AnnGUI.Parent = GUI
@@ -106,7 +107,7 @@ function run()
 ---------------------------------------------------------------
 
 local Version = '9.5.3'
-HttpService = game:GetService("HttpService")
+HttpService = cloneref(game:GetService("HttpService"))
 SAVEFILE = {
 	colorR = 0.121569;
 	colorG = 0.121569;
@@ -202,8 +203,8 @@ else
 	loaded = true
 end
 repeat wait() until loaded == true
-local gCoreGui = game:GetService('CoreGui') local gPlayers = game:GetService('Players') local gLighting = game:GetService('Lighting') local Player = gPlayers.LocalPlayer
-local Mouse = Player:GetMouse() local char = Player.Character local LP = gPlayers.LocalPlayer local gPlayers = game:GetService("Players") local _players = game:GetService('Players') MSGhook = false local services={} local cmds={}
+local gCoreGui = cloneref(game:GetService('CoreGui')) local gPlayers = cloneref(game:GetService('Players')) local gLighting = cloneref(game:GetService('Lighting')) local Player = gPlayers.LocalPlayer
+local Mouse = cloneref(Player:GetMouse()) local char = Player.Character local LP = gPlayers.LocalPlayer local gPlayers = cloneref(game:GetService("Players")) local _players = cloneref(game:GetService('Players')) MSGhook = false local services={} local cmds={}
 local std={} local loopkillT = {} local rainbowT = {} local disabletoolsT = {} local banT = {} local adminT = {} function FIND_CHILD(PATH, NAME) if PATH:FindFirstChild(NAME) then return true end return false end
 services.events = {} local user = gPlayers.LocalPlayer local bringT = {} agelock = nil isagelocked = false local scriptprefix='\\'
 local split=" " slock = false
@@ -1980,7 +1981,7 @@ else
     if child.Name == gPlayers[v].Name then
 	child:Destroy()
 end end wait(0.5)
-local m = game["Players"].LocalPlayer:GetMouse()
+local m = cloneref(game["Players"].LocalPlayer:GetMouse())
 local rs = game:GetService("RunService").RenderStepped
 local espplr = gPlayers[v]
         if espplr.Character and espplr.Name ~= _players.LocalPlayer.Name then
@@ -4603,7 +4604,7 @@ list_base_props={
  
  
 user=players.localPlayer;
-mouse=user:getMouse();
+mouse=cloneref(user:getMouse());
 char=user.Character;
 gui=user.PlayerGui;
 bag=user.Backpack;
@@ -9939,7 +9940,7 @@ local MusicPlayer do
 	local soundPrev = soundFrame:WaitForChild("PrevSong")
 	local soundButtons = {soundPlayStop,soundPause,soundNext,soundPrev}
 	local mouseDrag = false
-	local mouse = gPlayers.LocalPlayer:GetMouse()
+	local mouse = cloneref(gPlayers.LocalPlayer:GetMouse())
 	local lineBar = soundFrame:WaitForChild("Pos")
 	adminSound = Instance.new("Sound",nil)
 	local function timeConvert(num)
@@ -12463,7 +12464,7 @@ end)
 function dragmodel(model, window, frame, name)
 local Dragger = Instance.new("Dragger") local dragging = false local drag = model drag.Parent = workspace local parts = {}
 drag:MakeJoints() drag.Name = name
-local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+local mouse = cloneref(cloneref(game:GetService("Players")).LocalPlayer:GetMouse())
 function collectParts(object, baseParts)
 if object:IsA("BasePart") then
 baseParts[#baseParts+1] = object end
@@ -13333,8 +13334,8 @@ local ColorPicker do
 		local greenInput = pickerFrame.Green.Input
 		local blueInput = pickerFrame.Blue.Input
 
-		local user = game:GetService("UserInputService")
-		local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+		local user = cloneref(game:GetService("UserInputService"))
+		local mouse = cloneref(cloneref(game:GetService("Players")).LocalPlayer:GetMouse())
 
 		local hue,sat,val = 0,0,1
 		local red,green,blue = 1,1,1

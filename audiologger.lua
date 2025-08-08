@@ -1,7 +1,9 @@
 -- https://github.com/EdgeIY
 
+local cloneref = cloneref or function(a) return a end
+
 aa = game:GetObjects("rbxassetid://01997056190")[1]
-aa.Parent = game.CoreGui
+aa.Parent = cloneref(game:GetService("CoreGui"))
 wait(0.2)
 GUI = aa.PopupFrame.PopupFrame
 pos = 0

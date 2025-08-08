@@ -1,8 +1,10 @@
 script = Instance.new("LocalScript")
+local cloneref = cloneref or function(a) return a end
+local Players = cloneref(game:GetService("Players"))
 
 repeat wait()
 	a = pcall(function()
-		game:WaitForChild("Players").LocalPlayer:WaitForChild("PlayerScripts").ChildAdded:Connect(function(c)
+		Players.LocalPlayer:WaitForChild("PlayerScripts").ChildAdded:Connect(function(c)
 			if c.Name == "PlayerScriptsLoader"then
 				c.Disabled = true
 			end
@@ -11,15 +13,15 @@ repeat wait()
 	if a == true then break end
 until true == false
 
-game:WaitForChild("Players").LocalPlayer:WaitForChild("PlayerScripts").ChildAdded:Connect(function(c)
+Players.LocalPlayer:WaitForChild("PlayerScripts").ChildAdded:Connect(function(c)
 	if c.Name == "PlayerScriptsLoader"then
 		c.Disabled = true
 	end
 end)
 
 function _CameraUI()
-	local Players = game:GetService("Players")
-	local TweenService = game:GetService("TweenService")
+	local Players = cloneref(game:GetService("Players"))
+	local TweenService = cloneref(game:GetService("TweenService"))
 
 	local LocalPlayer = Players.LocalPlayer
 	if not LocalPlayer then
@@ -218,9 +220,8 @@ function _CameraUI()
 end
 
 function _CameraToggleStateController()
-	local Players = game:GetService("Players")
-	local UserInputService = game:GetService("UserInputService")
-	local GameSettings = UserSettings():GetService("UserGameSettings")
+	local UserInputService = cloneref(game:GetService("UserInputService"))
+	local GameSettings = cloneref(UserSettings():GetService("UserGameSettings")) -- is this even required?
 
 	local LocalPlayer = Players.LocalPlayer
 	if not LocalPlayer then
@@ -228,7 +229,7 @@ function _CameraToggleStateController()
 		LocalPlayer = Players.LocalPlayer
 	end
 
-	local Mouse = LocalPlayer:GetMouse()
+	local Mouse = cloneref(LocalPlayer:GetMouse())
 
 	local Input = _CameraInput()
 	local CameraUI = _CameraUI()
@@ -490,15 +491,14 @@ function _BaseCamera()
 	local CameraUI = _CameraUI()
 
 	--[[ Roblox Services ]]--
-	local Players = game:GetService("Players")
-	local UserInputService = game:GetService("UserInputService")
-	local StarterGui = game:GetService("StarterGui")
-	local GuiService = game:GetService("GuiService")
-	local ContextActionService = game:GetService("ContextActionService")
-	local VRService = game:GetService("VRService")
-	local UserGameSettings = UserSettings():GetService("UserGameSettings")
+	local UserInputService = cloneref(game:GetService("UserInputService"))
+	local StarterGui = cloneref(game:GetService("StarterGui"))
+	local GuiService = cloneref(game:GetService("GuiService"))
+	local ContextActionService = cloneref(game:GetService("ContextActionService"))
+	local VRService = cloneref(game:GetService("VRService"))
+	local UserGameSettings = cloneref(UserSettings():GetService("UserGameSettings"))
 
-	local player = Players.LocalPlayer 
+	local player = Players.LocalPlayer
 
 	--[[ The Module ]]--
 	local BaseCamera = {}
@@ -2485,7 +2485,7 @@ function _MouseLockController()
 	local ContextActionService = game:GetService("ContextActionService")
 	local Settings = UserSettings()	-- ignore warning
 	local GameSettings = Settings.GameSettings
-	local Mouse = PlayersService.LocalPlayer:GetMouse()
+	local Mouse = cloneref(PlayersService.LocalPlayer:GetMouse())
 
 	--[[ The Module ]]--
 	local MouseLockController = {}
@@ -9289,7 +9289,7 @@ function _InitObjects()
 	return initObjects
 end
 local plr = game.Players.LocalPlayer
-local ms = plr:GetMouse()
+local ms = cloneref(plr:GetMouse())
 local char
 plr.CharacterAdded:Connect(function(c)
 	char = c

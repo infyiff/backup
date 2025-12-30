@@ -1790,7 +1790,9 @@ local newnamecall = newcclosure(function(...)
                     if configs.funcEnabled then
                         data.infofunc = info(2,"f")
                         local calling = getcallingscript()
-                        data.callingscript = calling and cloneref(calling) or nil
+                        if type(calling) == "userdata" then
+                            data.callingscript = calling and cloneref(calling) or nil
+                        end
                     end
 
                     schedule(remoteHandler,data)

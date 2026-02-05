@@ -507,7 +507,7 @@ local EmbeddedModules = {
 				})
 				dragOutline.Parent = treeFrame
 
-				local mouse = Main.Mouse or service.Players.LocalPlayer:GetMouse()
+				local mouse = Main.Mouse or cloneref(service.Players.LocalPlayer:GetMouse())
 				local function move()
 					local posX = mouse.X - offX
 					local posY = mouse.Y - offY
@@ -597,7 +597,7 @@ local EmbeddedModules = {
 					if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 						local releaseEvent, mouseEvent
 
-						local mouse = Main.Mouse or plr:GetMouse()
+						local mouse = Main.Mouse or cloneref(plr:GetMouse())
 						local startX, startY
 
 						if input.UserInputType == Enum.UserInputType.Touch then
@@ -5315,7 +5315,7 @@ local EmbeddedModules = {
 			Lib.ScrollBar = (function()
 				local funcs = {}
 				local user = service.UserInputService
-				local mouse = plr:GetMouse()
+				local mouse = cloneref(plr:GetMouse())
 				local checkMouseInGui = Lib.CheckMouseInGui
 				local createArrow = Lib.CreateArrow
 
@@ -5724,7 +5724,7 @@ local EmbeddedModules = {
 			Lib.Window = (function()
 				local funcs = {}
 				local static = {MinWidth = 200, FreeWidth = 200}
-				local mouse = plr:GetMouse()
+				local mouse = cloneref(plr:GetMouse())
 				local sidesGui, alignIndicator
 				local visibleWindows = {}
 				local leftSide = {Width = 300, Windows = {}, ResizeCons = {}, Hidden = true}
@@ -7014,7 +7014,7 @@ local EmbeddedModules = {
 
 				local mt = {__index = funcs}
 				local function new()
-					if not mouse then mouse = Main.Mouse or service.Players.LocalPlayer:GetMouse() end
+					if not mouse then mouse = Main.Mouse or cloneref(service.Players.LocalPlayer:GetMouse()) end
 
 					local obj = setmetatable({
 						Width = 200,
@@ -7243,7 +7243,7 @@ local EmbeddedModules = {
 				end
 
 				local function setupMouseSelection(obj)
-					local mouse = plr:GetMouse()
+					local mouse = cloneref(plr:GetMouse())
 					local codeFrame = obj.GuiElems.LinesFrame
 					local lines = obj.Lines
 
@@ -8592,7 +8592,7 @@ local EmbeddedModules = {
 			Lib.BrickColorPicker = (function()
 				local funcs = {}
 				local paletteCount = 0
-				local mouse = service.Players.LocalPlayer:GetMouse()
+				local mouse = cloneref(service.Players.LocalPlayer:GetMouse())
 				local hexStartX = 4
 				local hexSizeX = 27
 				local hexTriangleStart = 1
@@ -8906,7 +8906,7 @@ local EmbeddedModules = {
 					local blueInput = pickerFrame.Blue.Input
 
 					local user = service.UserInputService
-					local mouse = service.Players.LocalPlayer:GetMouse()
+					local mouse = cloneref(service.Players.LocalPlayer:GetMouse())
 
 					local hue,sat,val = 0,0,1
 					local red,green,blue = 1,1,1
@@ -9258,7 +9258,7 @@ local EmbeddedModules = {
 					local resetSequence = nil
 
 					local user = service.UserInputService
-					local mouse = service.Players.LocalPlayer:GetMouse()
+					local mouse = cloneref(service.Players.LocalPlayer:GetMouse())
 
 					for i = 2,10 do
 						local newLine = Instance.new("Frame")
@@ -9754,7 +9754,7 @@ local EmbeddedModules = {
 					local topClose = pickerTopBar.Close
 
 					local user = service.UserInputService
-					local mouse = service.Players.LocalPlayer:GetMouse()
+					local mouse = cloneref(service.Players.LocalPlayer:GetMouse())
 
 					local colors = {{Color3.new(1,0,1),0},{Color3.new(0.2,0.9,0.2),0.2},{Color3.new(0.4,0.5,0.9),0.7},{Color3.new(0.6,1,1),1}}
 					local resetSequence = nil
@@ -11046,7 +11046,7 @@ local EmbeddedModules = {
 				local LogService = game:GetService("LogService")
 				local Players = game:GetService("Players")
 				local LocalPlayer = Players.LocalPlayer
-				local Mouse = LocalPlayer:GetMouse()
+				local Mouse = cloneref(LocalPlayer:GetMouse())
 				local UserInputService = game:GetService("UserInputService")
 				local RunService = game:GetService("RunService")
 
@@ -11678,7 +11678,7 @@ Main = (function()
 	Main.Elevated = false
 	Main.MissingEnv = {}
 	Main.Version = "" -- Beta 1.0.0
-	Main.Mouse = plr:GetMouse()
+	Main.Mouse = cloneref(plr:GetMouse())
 	Main.AppControls = {}
 	Main.Apps = Apps
 	Main.MenuApps = {}
@@ -12681,3 +12681,4 @@ end)()
 
 -- Start
 Main.Init()
+

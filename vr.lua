@@ -3,8 +3,9 @@
 
 --[[---------Settings---------]]--
 local game = game
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local cloneref = cloneref or function(a) return a end
+local Players = cloneref(game:GetService("Players"))
+local RunService = cloneref(game:GetService("RunService"))
 local sethidden = sethiddenproperty or set_hidden_property or set_hidden_prop
 coroutine.wrap(function()
     while wait() do
@@ -58,7 +59,7 @@ reanimFolder.Name = "FakeCharacter"
 local model = Instance.new("Model", reanimFolder)
 model.Name = "Reanimation"
 
-local userInputService = game:GetService("UserInputService")
+local userInputService = cloneref(game:GetService("UserInputService"))
 local movingW, movingA, movingS, movingD, jumping = false
 
 --Body Parts--
@@ -277,14 +278,14 @@ Script = function()
     local WeldBase = Character:WaitForChild("HumanoidRootPart")
     local ArmBase = Character:FindFirstChild("RightHand") or Character:FindFirstChild("Right Arm") or WeldBase
     local Backpack = Client:WaitForChild("Backpack")
-    local Mouse = Client:GetMouse()
+    local Mouse = cloneref(Client:GetMouse())
     local Camera = workspace.CurrentCamera
-    local VRService = game:GetService("VRService")
+    local VRService = cloneref(game:GetService("VRService"))
     local VRReady = VRService.VREnabled
-    local UserInputService = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
-    local HttpService = game:GetService("HttpService")
-    local StarterGui = game:GetService("StarterGui")
+    local UserInputService = cloneref(game:GetService("UserInputService"))
+    local RunService = cloneref(game:GetService("RunService"))
+    local HttpService = cloneref(game:GetService("HttpService"))
+    local StarterGui = cloneref(game:GetService("StarterGui"))
     local HeadAccessories = {}
     local UsedAccessories = {}
     local Pointer = false
@@ -356,7 +357,7 @@ Script = function()
 --]]
     function Tween(Object, Style, Direction, Time, Goal)
         local tweenInfo = TweenInfo.new(Time, Enum.EasingStyle[Style], Enum.EasingDirection[Direction])
-        local tween = game:GetService("TweenService"):Create(Object, tweenInfo, Goal)
+        local tween = cloneref(game:GetService("TweenService")):Create(Object, tweenInfo, Goal)
         tween.Completed:Connect(
             function()
                 tween:Destroy()
@@ -1129,12 +1130,12 @@ Script = function()
         --[[
  Functions
  --]]
-        local Players = game:GetService("Players")
+        local Players = cloneref(game:GetService("Players"))
         local Client = Players.LocalPlayer
-        local VRService = game:GetService("VRService")
+        local VRService = cloneref(game:GetService("VRService"))
         local VRReady = VRService.VREnabled
-        local UserInputService = game:GetService("UserInputService")
-        local RunService = game:GetService("RunService")
+        local UserInputService = cloneref(game:GetService("UserInputService"))
+        local RunService = cloneref(game:GetService("RunService"))
         local Camera = workspace.CurrentCamera
         --[[
  Code
@@ -1238,11 +1239,11 @@ ChatHUDFunc = function()
     --[[
  Variables
  --]]
-    local UserInputService = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
-    local VRService = game:GetService("VRService")
+    local UserInputService = cloneref(game:GetService("UserInputService"))
+    local RunService = cloneref(game:GetService("RunService"))
+    local VRService = cloneref(game:GetService("VRService"))
     local VRReady = VRService.VREnabled
-    local Players = game:GetService("Players")
+    local Players = cloneref(game:GetService("Players"))
     local Client = Players.LocalPlayer
     local ChatHUD = game:GetObjects("rbxassetid://4476067885")[1]
     local GlobalFrame = ChatHUD.GlobalFrame
@@ -1252,7 +1253,7 @@ ChatHUDFunc = function()
     local Local = ChatHUD.Local
     local Camera = workspace.CurrentCamera
     Template.Parent = nil
-    ChatHUD.Parent = game:GetService("CoreGui")
+    ChatHUD.Parent = cloneref(game:GetService("CoreGui"))
     --[[
  Code
  --]]
@@ -1342,7 +1343,7 @@ ChatHUDFunc = function()
     local ChatPart = ChatHUD.Part
     ChatHUD.Adornee = ChatPart
     if VRReady then
-        ChatHUD.Parent = game:GetService("CoreGui")
+        ChatHUD.Parent = cloneref(game:GetService("CoreGui"))
         ChatHUD.Enabled = true
         ChatHUD.AlwaysOnTop = true
         local OnInput =
@@ -1381,20 +1382,20 @@ ViewHUDFunc = function()
  Variables
  --]]
     local ViewportRange = ViewportRange or 32
-    local UserInputService = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
-    local VRService = game:GetService("VRService")
+    local UserInputService = cloneref(game:GetService("UserInputService"))
+    local RunService = cloneref(game:GetService("RunService"))
+    local VRService = cloneref(game:GetService("VRService"))
     local VRReady = VRService.VREnabled
-    local Players = game:GetService("Players")
+    local Players = cloneref(game:GetService("Players"))
     local Client = Players.LocalPlayer
-    local Mouse = Client:GetMouse()
+    local Mouse = cloneref(Client:GetMouse())
     local Camera = workspace.CurrentCamera
     local CameraPort = Camera.CFrame
     local ViewHUD = script:FindFirstChild("ViewHUD") or game:GetObjects("rbxassetid://4480405425")[1]
     local Viewport = ViewHUD.Viewport
     local Viewcam = Instance.new("Camera")
     local ViewPart = ViewHUD.Part
-    ViewHUD.Parent = game:GetService("CoreGui")
+    ViewHUD.Parent = cloneref(game:GetService("CoreGui"))
     Viewcam.Parent = Viewport
     Viewcam.CameraType = Enum.CameraType.Scriptable
     Viewport.CurrentCamera = Viewcam
@@ -1538,7 +1539,7 @@ ViewHUDFunc = function()
         end
     end
     
-    game:GetService("RunService").Heartbeat:Connect(function()
+    cloneref(game:GetService("RunService")).Heartbeat:Connect(function()
         for i,v in pairs(character1:GetChildren()) do
             if v:IsA("BasePart") then
                 v.Velocity = Vector3.new(bodyVelocity[1], bodyVelocity[2], bodyVelocity[3])
@@ -1616,7 +1617,7 @@ ViewHUDFunc = function()
         end
     end)
     
-    game:GetService("RunService").Stepped:Connect(function()
+    cloneref(game:GetService("RunService")).Stepped:Connect(function()
         for i,v in pairs(reanimation:GetChildren()) do
             if v:IsA("BasePart") then
                 v.CanCollide = false
@@ -1631,7 +1632,7 @@ ViewHUDFunc = function()
 end
 Script()
 wait(2)
-local Players = game:GetService("Players")
+local Players = cloneref(game:GetService("Players"))
 local lp = Players.LocalPlayer
 local character = reanimation--lp.Character
 local A0LL = Instance.new("Attachment")

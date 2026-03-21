@@ -834,6 +834,66 @@ local EmbeddedModules = {
 				end
 			end
 
+			Explorer.SetupTagConnections = function()
+				local CS = service.CollectionService
+				local watched = {}
+				local propRefreshPending = false
+
+				local function schedulePropsRefresh()
+					if propRefreshPending then return end
+					propRefreshPending = true
+
+					coroutine.wrap(function()
+						Lib.FastWait(0.2)
+						propRefreshPending = false
+
+						if #Explorer.Selection.List > 0 then
+							Properties.ShowExplorerProps()
+						end
+					end)()
+				end
+
+				local function selectionContains(inst)
+					local sList = Explorer.Selection.List
+					for i = 1, #sList do
+						if sList[i].Obj == inst then return true end
+					end
+					return false
+				end
+
+				local function watchTag(tag)
+					if watched[tag] then return end
+
+					watched[tag] = {
+						CS:GetInstanceAddedSignal(tag):Connect(function(inst)
+							if selectionContains(inst) then
+								schedulePropsRefresh()
+							end
+						end),
+						CS:GetInstanceRemovedSignal(tag):Connect(function(inst)
+							if selectionContains(inst) then
+								schedulePropsRefresh()
+							end
+						end)
+					}
+				end
+
+				for _, tag in ipairs(CS:GetAllTags()) do
+					watchTag(tag)
+				end
+
+				CS.TagAdded:Connect(function(tag)
+					watchTag(tag)
+				end)
+
+				CS.TagRemoved:Connect(function(tag)
+					if watched[tag] then
+						for _, con in ipairs(watched[tag]) do con:Disconnect() end
+						watched[tag] = nil
+					end
+				end)
+			end
+
 			Explorer.ViewNode = function(node)
 				if not node then return end
 
@@ -941,6 +1001,20 @@ local EmbeddedModules = {
 				-- context:AddRegistered("GET_REFERENCES")
 				-- context:AddRegistered("VIEW_API")
 
+                context:QueueDivider()
+
+				context:AddRegistered("ADD_TAG")
+
+				local selHasTags = false
+				for i = 1, #sList do
+					if #service.CollectionService:GetTags(sList[i].Obj) > 0 then
+						selHasTags = true
+                        break
+					end
+				end
+
+				context:AddRegistered("REMOVE_TAG", not selHasTags)
+
 				context:QueueDivider()
 
 				if presentClasses["BasePart"] or presentClasses["Model"] then
@@ -976,6 +1050,106 @@ local EmbeddedModules = {
 
 				Explorer.LastRightClickX, Explorer.LastRightClickY = Mouse.X, Mouse.Y
 				context:Show(Mouse.X, Mouse.Y)
+			end
+
+			Explorer.ShowAddTagMenu = function(x, y)
+				local CS = service.CollectionService
+				local sList = selection.List
+				local context = Lib.ContextMenu.new()
+				context.SearchEnabled = true
+				context.FocusSearchOnShow = true
+				context.ClearSearchOnShow = true
+				context.MaxHeight = 300
+				context:ApplyTheme({
+					ContentColor = Settings.Theme.Main2,
+					OutlineColor = Settings.Theme.Outline1,
+					DividerColor = Settings.Theme.Outline1,
+					TextColor = Settings.Theme.Text,
+					HighlightColor = Settings.Theme.ButtonHover
+				})
+
+				local allTags = CS:GetAllTags()
+				table.sort(allTags)
+
+				for _, tag in ipairs(allTags) do
+					context:Add({Name = tag, OnClick = function(tagName)
+						for i = 1, #sList do
+							pcall(CS.AddTag, CS, sList[i].Obj, tagName)
+						end
+					end})
+				end
+
+                -- Technically this is impossible to see (Roblox themselves use tags for UI stuff) but it's here
+				if #allTags == 0 then
+					context:Add({Name = "(no tags exist)", Disabled = true})
+				end
+
+				local searchBar = context.GuiElems.SearchBar
+				searchBar.FocusLost:Connect(function(enterPressed)
+					if enterPressed then
+						local newTag = searchBar.Text
+						if #newTag > 0 then
+							for i = 1, #sList do
+								pcall(CS.AddTag, CS, sList[i].Obj, newTag)
+							end
+							context:Hide()
+						end
+					end
+				end)
+
+				context:Show(x, y)
+			end
+
+			Explorer.ShowRemoveTagMenu = function(x, y)
+				local CS = service.CollectionService
+				local sList = selection.List
+				local tagCounts = {}
+				for i = 1, #sList do
+					for _, tag in ipairs(CS:GetTags(sList[i].Obj)) do
+						tagCounts[tag] = (tagCounts[tag] or 0) + 1
+					end
+				end
+
+				local context = Lib.ContextMenu.new()
+				context.SearchEnabled = true
+				context.FocusSearchOnShow = true
+				context.MaxHeight = 300
+				context:ApplyTheme({
+					ContentColor = Settings.Theme.Main2,
+					OutlineColor = Settings.Theme.Outline1,
+					DividerColor = Settings.Theme.Outline1,
+					TextColor = Settings.Theme.Text,
+					HighlightColor = Settings.Theme.ButtonHover
+				})
+
+				local hasTags = false
+
+				local sorted = {}
+				for tag, count in pairs(tagCounts) do
+					sorted[#sorted+1] = {tag = tag, count = count}
+				end
+
+				table.sort(sorted, function(a,b)
+					if a.count ~= b.count then return a.count > b.count end
+					return a.tag < b.tag
+				end)
+
+				for _, entry in ipairs(sorted) do
+					hasTags = true
+					local tag, count = entry.tag, entry.count
+					local suffix = count < #sList and (" (%d/%d)"):format(count, #sList) or ""
+					context:Add({Name = tag .. suffix, OnClick = function()
+						for i = 1, #sList do
+							pcall(CS.RemoveTag, CS, sList[i].Obj, tag)
+						end
+					end})
+				end
+
+				if not hasTags then
+					context:Add({Name = "(no tags to delete)", Disabled = true})
+				end
+
+				context:Show(x, y)
 			end
 
 			Explorer.InitRightClick = function()
@@ -1411,6 +1585,14 @@ local EmbeddedModules = {
 					if scr then ScriptViewer.ViewScript(scr) end
 				end})
 
+				context:Register("ADD_TAG",{Name = "Add Tag", IconMap = Explorer.MiscIcons, Icon = "AddStar", OnClick = function()
+					Explorer.ShowAddTagMenu(Explorer.LastRightClickX, Explorer.LastRightClickY)
+				end})
+
+				context:Register("REMOVE_TAG",{Name = "Remove Tag", IconMap = Explorer.MiscIcons, Icon = "RemoveStar", DisabledIcon = "RemoveStar", OnClick = function()
+					Explorer.ShowRemoveTagMenu(Explorer.LastRightClickX, Explorer.LastRightClickY)
+				end})
+
 				context:Register("SAVE_SCRIPT",{Name = "Save Script", IconMap = Explorer.MiscIcons, Icon = "Save", OnClick = function()
 					for _, v in next, selection.List do
 						if v.Obj:IsA("LuaSourceContainer") and env.isViableDecompileScript(v.Obj) then
@@ -1748,6 +1930,13 @@ local EmbeddedModules = {
 				NewFilter({"parent", "p"}, function(Obj, str) return Obj.Parent and (Obj.Parent.Name:lower()):find(str) end)
 				NewFilter({"class", "c"}, function(Obj, str) return (Obj.ClassName:lower()):find(str) end)
 				NewFilter({"isa", "i"}, function(Obj, str) return Obj:IsA(str) end)
+
+                NewFilter({"tag", "t"}, function(Obj, str)
+					for _, tag in ipairs(service.CollectionService:GetTags(Obj)) do
+						if tag:lower():find(str, 1, true) then return true end
+					end
+					return false
+				end)
 
 				NewFilter({"only", "o"}, function(Obj, str)
 					local Special = Only[str]
@@ -2251,6 +2440,7 @@ local EmbeddedModules = {
 				end
 
 				Explorer.SetupConnections()
+                Explorer.SetupTagConnections()
 
 				local insts = getDescendants(game)
 				if Main.Elevated then
@@ -2752,6 +2942,27 @@ local EmbeddedModules = {
 					end
 				end
 
+                if #sList > 0 then
+					local CS = service.CollectionService
+					local seenTags = {}
+
+					for i = 1, #sList do
+						for _, tag in ipairs(CS:GetTags(sList[i].Obj)) do
+							if not seenTags[tag] then
+								seenTags[tag] = true
+
+								props[#props+1] = {
+									Category = "Tags", Class = "Tags", Name = "TAG_"..tag,
+									TagName = tag, IsTag = true,
+									ValueType = {Name = "string"}, Tags = {}
+								}
+							end
+						end
+					end
+
+					props[#props+1] = {Category = "Tags", Class = "", Name = "~~AddTag", SpecialRow = "AddTag", ValueType = {Name = "string"}, Tags = {}}
+				end
+
 				table.sort(props,function(a,b)
 					if a.Category ~= b.Category then
 						return (categoryOrder[a.Category] or 9999) < (categoryOrder[b.Category] or 9999)
@@ -3080,14 +3291,28 @@ local EmbeddedModules = {
 				end)
 
 				newEntry.RowButton.MouseButton1Click:Connect(function()
-					Properties.DisplayAddAttributeWindow()
+					local prop = viewList[index + Properties.Index]
+					if not prop then return end
+					if prop.SpecialRow == "AddTag" then
+						Explorer.ShowAddTagMenu(Main.Mouse.X, Main.Mouse.Y)
+					else
+						Properties.DisplayAddAttributeWindow()
+					end
 				end)
 
 				newEntry.EditAttributeButton.MouseButton1Down:Connect(function()
 					local prop = viewList[index + Properties.Index]
 					if not prop then return end
-
-					Properties.DisplayAttributeContext(prop)
+					if prop.IsTag then
+						local CS = service.CollectionService
+						local sList = Explorer.Selection.List
+						for i = 1, #sList do
+							pcall(CS.RemoveTag, CS, sList[i].Obj, prop.TagName)
+						end
+						Properties.ShowExplorerProps()
+					else
+						Properties.DisplayAttributeContext(prop)
+					end
 				end)
 
 				valueFrame.SoundPreview.ControlButton.MouseButton1Click:Connect(function()
@@ -3718,10 +3943,19 @@ local EmbeddedModules = {
 						entry.Size = UDim2.new(scaleType == 0 and 0 or 1, scaleType == 0 and Properties.ViewWidth + valueWidth or 0,0,22)
 
 						if prop.SpecialRow then
+                            -- Has to be done this way or it causes a widget bug :P
+							nameFrame.Visible = false
+							valueFrame.Visible = false
+							editAttributeButton.Visible = false
+							local btn = guiElems.RowButton
+							btn.Visible = true
+							btn.Size = UDim2.new(1, 0, 1, 0)
+							btn.TextXAlignment = Enum.TextXAlignment.Center
+							btn.BackgroundColor3 = Color3.new(0.2352941185236, 0.2352941185236, 0.2352941185236)
 							if prop.SpecialRow == "AddAttribute" then
-								nameFrame.Visible = false
-								valueFrame.Visible = false
-								guiElems.RowButton.Visible = true
+								btn.Text = "Add Attribute"
+							elseif prop.SpecialRow == "AddTag" then
+								btn.Text = "Add Tag"
 							end
 						else
 							-- Revert special row stuff
@@ -3735,7 +3969,23 @@ local EmbeddedModules = {
 
 							local gName = (prop.CategoryName and "CAT_"..prop.CategoryName) or prop.Class.."."..prop.Name..(prop.SubName or "")
 
-							if prop.CategoryName then
+							if prop.IsTag then
+								entry.BackgroundColor3 = Settings.Theme.Main2
+								nameFrame.Size = UDim2.new(1,-20,1,0)
+								valueFrame.Visible = false
+								expand.Visible = false
+								toggleAttributes.Visible = false
+								propNameBox.Text = prop.TagName
+								propNameBox.Font = Enum.Font.SourceSans
+								propNameBox.TextColor3 = Settings.Theme.Text
+								nameFrame.BackgroundTransparency = 1
+								editAttributeButton.Visible = true
+								editAttributeButton.Text = "x"
+								editAttributeButton.TextColor3 = Settings.Theme.Text
+								editAttributeButton.TextSize = 16
+								local icon = editAttributeButton:FindFirstChild("Icon")
+								if icon then icon.Visible = false end
+							elseif prop.CategoryName then
 								entry.BackgroundColor3 = Settings.Theme.Main1
 								valueFrame.Visible = false
 
@@ -3761,6 +4011,11 @@ local EmbeddedModules = {
 
 								local attributeOffset = (prop.IsAttribute and 20 or 0)
 								editAttributeButton.Visible = (prop.IsAttribute and not prop.RootType)
+
+								editAttributeButton.Text = ""
+								local icon = editAttributeButton:FindFirstChild("Icon")
+								if icon then icon.Visible = true end
+
 								toggleAttributes.Visible = false
 
 								-- Moving around the frames
@@ -12046,6 +12301,7 @@ Main = (function()
 		insertAbove(categoryOrder,"Assembly","Surface Inputs")
 		insertAbove(categoryOrder,"Character","Controls")
 		categoryOrder[#categoryOrder+1] = "Unscriptable"
+        categoryOrder[#categoryOrder+1] = "Tags"
 		categoryOrder[#categoryOrder+1] = "Attributes"
 
 		local categoryOrderMap = {}

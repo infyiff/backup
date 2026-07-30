@@ -1,16 +1,7 @@
 local old_pcall = pcall
-
--- Define the new pcall function
 pcall = function(f, ...)
-    -- Call the original pcall with the function and its arguments
     local success, result = old_pcall(f, ...)
-
-    -- If the call was not successful, print the error
-    if not success then
-        print("Error:", result)
-    end
-
-    -- Return the original results
+    if not success then print("Error:", result) end
     return success, result
 end
 local print = function() end

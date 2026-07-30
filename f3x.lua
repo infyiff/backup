@@ -1,3 +1,18 @@
+local old_pcall = pcall
+
+-- Define the new pcall function
+pcall = function(f, ...)
+    -- Call the original pcall with the function and its arguments
+    local success, result = old_pcall(f, ...)
+
+    -- If the call was not successful, print the error
+    if not success then
+        print("Error:", result)
+    end
+
+    -- Return the original results
+    return success, result
+end
 local print = function() end
 local warn = function() end
 local error = function() end
@@ -1112,7 +1127,7 @@ t.Help =
 --[[F3XForce by Nickoakz :>]] 
 --[[Will release an updated version later]] 
 --[[Please don't modify credits.. ]]
-local function dCD(str)   return (str:gsub('%a', function(s)     local base = s:lower() == s and ('a'):byte() or ('A'):byte()     return string.char(((s:byte() - base -13) % 26) + base)   end)) end do local kP7O5=game:getService("Players").LocalPlayer Tool=Instance.new("Tool")Tool.ToolTip="Building Tools by F3X"Tool.Name="F3X" Tool.CanBeDropped=false
+local function dCD(str)   return (str:gsub('%a', function(s)     local base = s:lower() == s and ('a'):byte() or ('A'):byte()     return string.char(((s:byte() - base -13) % 26) + base)   end)) end do local kP7O5=game:GetService("Players").LocalPlayer Tool=Instance.new("Tool")Tool.ToolTip="Building Tools by F3X"Tool.Name="F3X" Tool.CanBeDropped=false
 Tool.RequiresHandle=true
 Tool.GripForward=Vector3.new(0,0,-1) Tool.GripPos=Vector3.new(0,0,.4)Tool.GripRight=Vector3.new(1,0,0) Tool.GripUp=Vector3.new(0,1,0)local lqT=Instance.new("Part") lqT.Size=Vector3.new(.8,.8,.8)lqT.TopSurface=0
 lqT.BottomSurface=0
@@ -1543,7 +1558,7 @@ function SupportLibrary.ClearTable(udoq) for boTHtaG in pairs(udoq)do udoq[boTHt
 return udoq end Support=SupportLibrary for zbQgT,duYPlVu in pairs(Assets)do ContentProvider:Preload(duYPlVu)end
 repeat wait(0)until _G.gloo
 Gloo=_G.gloo
-HttpInterface={} HttpInterface.GetAsync=function(n5,zl5hfbAb) print("preforming GetAsync")local xVvJF=game:GetService('HttpService')local zsKRyBU={} ypcall(function() zsKRyBU={xVvJF:GetAsync(n5,zl5hfbAb)}end)return unpack(zsKRyBU)end HttpInterface.PostAsync=function(Lukg,rkKj,yAaxRZGY)print("preforming PostAsync") local _Tb=game:GetService('HttpService')local BJRFwSz={} ypcall(function() BJRFwSz={_Tb:PostAsync(Lukg,rkKj,yAaxRZGY)}end)return unpack(BJRFwSz)end HttpInterface.Test=function()print("preforming test") local C3MNkiZ=game:GetService('HttpService') local beAAh6T,yUaD=ypcall(function()C3MNkiZ:GetAsync'http://www.google.com'end)return beAAh6T,yUaD end
+HttpInterface={} HttpInterface.HttpGet=function(n5,zl5hfbAb) print("preforming HttpGet")local xVvJF=game:GetService('HttpService')local zsKRyBU={} ypcall(function() zsKRyBU={xVvJF:HttpGet(n5,zl5hfbAb)}end)return unpack(zsKRyBU)end HttpInterface.PostAsync=function(Lukg,rkKj,yAaxRZGY)print("preforming PostAsync") local _Tb=game:GetService('HttpService')local BJRFwSz={} ypcall(function() BJRFwSz={_Tb:PostAsync(Lukg,rkKj,yAaxRZGY)}end)return unpack(BJRFwSz)end HttpInterface.Test=function()print("preforming test") local C3MNkiZ=game:GetService('HttpService') local beAAh6T,yUaD=ypcall(function()C3MNkiZ:HttpGet'http://www.google.com'end)return beAAh6T,yUaD end
 print("Begin UI")local DFb100j=nil do NG1=Instance.new("Frame") NG1.Name=dCD([=[Vagresnprf]=])NG2=Instance.new("Frame")NG2.Active=true NG2.BackgroundColor3=Color3.new(0.639216,0.635294,0.647059)NG2.BackgroundTransparency=1
 NG2.BorderSizePixel=0 NG2.Name=dCD([=[OGZngrevnyGbbyTHV]=])NG2.Position=UDim2.new(0,0,0,172) NG2.Size=UDim2.new(0,200,0,145)NG2.Draggable=true
 NG2.Parent=NG1
@@ -6056,12 +6071,12 @@ ZcV.meshes=WiZA
 ZcV.mesh_parents=K4SQ1h2e
 History:add(ZcV)end Tools.Mesh.startHistoryRecord=function(ZhG,ARBIKz) if ZhG.State.HistoryRecord then ZhG.State.HistoryRecord=nil end ZhG.State.HistoryRecord={targets=Support.CloneTable(ARBIKz),initial_type={},terminal_type={},initial_mesh={},terminal_mesh={},initial_texture={},terminal_texture={},initial_scale={},terminal_scale={},initial_tint={},terminal_tint={},unapply=function(ZhG) Selection:clear() for p7,j in pairs(ZhG.targets)do if j then Selection:add(j.Parent) j.MeshType=ZhG.initial_type[j]j.MeshId=ZhG.initial_mesh[j] j.TextureId=ZhG.initial_texture[j]j.Scale=ZhG.initial_scale[j] j.VertexColor=ZhG.initial_tint[j]end end end,apply=function(ZhG) Selection:clear() for zbC2yHd0,I in pairs(ZhG.targets)do if I then Selection:add(I.Parent) I.MeshType=ZhG.terminal_type[I]I.MeshId=ZhG.terminal_mesh[I] I.TextureId=ZhG.terminal_texture[I]I.Scale=ZhG.terminal_scale[I] I.VertexColor=ZhG.terminal_tint[I]end end end} for Jt,aUu in pairs(ZhG.State.HistoryRecord.targets)do if aUu then ZhG.State.HistoryRecord.initial_type[aUu]=aUu.MeshType ZhG.State.HistoryRecord.initial_mesh[aUu]=aUu.MeshId ZhG.State.HistoryRecord.initial_texture[aUu]=aUu.TextureId ZhG.State.HistoryRecord.initial_scale[aUu]=aUu.Scale ZhG.State.HistoryRecord.initial_tint[aUu]=aUu.VertexColor end end end Tools.Mesh.finishHistoryRecord=function(We1INxkk) if not We1INxkk.State.HistoryRecord then return end for X37Nsx,eE in pairs(We1INxkk.State.HistoryRecord.targets)do if eE then We1INxkk.State.HistoryRecord.terminal_type[eE]=eE.MeshType We1INxkk.State.HistoryRecord.terminal_mesh[eE]=eE.MeshId We1INxkk.State.HistoryRecord.terminal_texture[eE]=eE.TextureId We1INxkk.State.HistoryRecord.terminal_scale[eE]=eE.Scale We1INxkk.State.HistoryRecord.terminal_tint[eE]=eE.VertexColor end end
 History:add(We1INxkk.State.HistoryRecord)We1INxkk.State.HistoryRecord= nil end Tools.Mesh.changeMesh=function(pCWPYYE,g)local kUNaj9={} for Ewt,TzK in pairs(Selection.Items)do local jjU=Support.GetChildOfClass(TzK,"SpecialMesh")if jjU then table.insert(kUNaj9,jjU)end end
-local AiX,CzFcrl,X8Gpm3 if HttpAvailable then local DGflu='http://www.f3xteam.com/bt/getFirstMeshData/%s' local FF9q1AO=HttpInterface.GetAsync(DGflu:format(g)) if FF9q1AO and FF9q1AO:len()>0 then local FF9q1AO=RbxUtility.DecodeJSON(FF9q1AO) if FF9q1AO and FF9q1AO.success then if FF9q1AO.meshID then g=FF9q1AO.meshID end
+local AiX,CzFcrl,X8Gpm3 if HttpAvailable then local DGflu='http://www.f3xteam.com/bt/getFirstMeshData/%s' local FF9q1AO=HttpInterface.HttpGet(DGflu:format(g)) if FF9q1AO and FF9q1AO:len()>0 then local FF9q1AO=RbxUtility.DecodeJSON(FF9q1AO) if FF9q1AO and FF9q1AO.success then if FF9q1AO.meshID then g=FF9q1AO.meshID end
 if FF9q1AO.textureID then AiX=FF9q1AO.textureID end CzFcrl=Vector3.new(FF9q1AO.tint.x,FF9q1AO.tint.y,FF9q1AO.tint.z) X8Gpm3=Vector3.new(FF9q1AO.scale.x,FF9q1AO.scale.y,FF9q1AO.scale.z)end end end
 pCWPYYE:startHistoryRecord(kUNaj9) for pJWQ,DZJXU in pairs(kUNaj9)do if g then DZJXU.MeshId= "http://www.roblox.com/asset/?id="..g end
 if AiX then DZJXU.TextureId="http://www.roblox.com/asset/?id="..AiX end if CzFcrl then DZJXU.VertexColor=CzFcrl end
 if X8Gpm3 then DZJXU.Scale=X8Gpm3 end end
-pCWPYYE:finishHistoryRecord()end Tools.Mesh.changeTexture=function(Oo6w,hN)local jz1uXDx={} for vTRoD0X,oX9O28J in pairs(Selection.Items)do local sTbHW=Support.GetChildOfClass(oX9O28J,"SpecialMesh")if sTbHW then table.insert(jz1uXDx,sTbHW)end end if HttpAvailable then local upZW='http://www.f3xteam.com/bt/getDecalImageID/%s' local AWQPjyxs=HttpInterface.GetAsync(upZW:format(hN)) if AWQPjyxs and AWQPjyxs:len()>0 then hN=AWQPjyxs end end
+pCWPYYE:finishHistoryRecord()end Tools.Mesh.changeTexture=function(Oo6w,hN)local jz1uXDx={} for vTRoD0X,oX9O28J in pairs(Selection.Items)do local sTbHW=Support.GetChildOfClass(oX9O28J,"SpecialMesh")if sTbHW then table.insert(jz1uXDx,sTbHW)end end if HttpAvailable then local upZW='http://www.f3xteam.com/bt/getDecalImageID/%s' local AWQPjyxs=HttpInterface.HttpGet(upZW:format(hN)) if AWQPjyxs and AWQPjyxs:len()>0 then hN=AWQPjyxs end end
 Oo6w:startHistoryRecord(jz1uXDx) for V,M in pairs(jz1uXDx)do M.TextureId= "http://www.roblox.com/asset/?id="..hN end
 Oo6w:finishHistoryRecord()end Tools.Mesh.changeScale=function(sPh,RKD_1r,hnrLmi)local Ea23={} for gdet,x in pairs(Selection.Items)do local KzXd=Support.GetChildOfClass(x,"SpecialMesh")if KzXd then table.insert(Ea23,KzXd)end end
 sPh:startHistoryRecord(Ea23) for gqa3M1,Z in pairs(Ea23)do Z.Scale=Vector3.new( RKD_1r=='x'and hnrLmi or Z.Scale.x,RKD_1r=='y'and hnrLmi or Z.Scale.y, RKD_1r=='z'and hnrLmi or Z.Scale.z)end
@@ -6252,9 +6267,9 @@ if kQfTr6:IsA("Texture")then hebAWpv.State.HistoryRecord.terminal_repeat[kQfTr6]
 History:add(hebAWpv.State.HistoryRecord)hebAWpv.State.HistoryRecord= nil end Tools.Texture.changeMode=function(VF,qby)VF.Options.mode=qby
 if not VF.GUI then return end if qby== "decal"then VF.GUI.ModeOption.Decal.SelectedIndicator.Transparency=0 VF.GUI.ModeOption.Texture.SelectedIndicator.Transparency=1 VF.GUI.ModeOption.Decal.Background.Image=Assets.DarkSlantedRectangle VF.GUI.ModeOption.Texture.Background.Image=Assets.LightSlantedRectangle
 VF.GUI.AddButton.Button.Text="ADD DECAL" VF.GUI.RemoveButton.Button.Text="REMOVE DECAL"elseif qby=="texture"then VF.GUI.ModeOption.Decal.SelectedIndicator.Transparency=1 VF.GUI.ModeOption.Texture.SelectedIndicator.Transparency=0 VF.GUI.ModeOption.Decal.Background.Image=Assets.LightSlantedRectangle VF.GUI.ModeOption.Texture.Background.Image=Assets.DarkSlantedRectangle
-VF.GUI.AddButton.Button.Text="ADD TEXTURE" VF.GUI.RemoveButton.Button.Text="REMOVE TEXTURE"end end Tools.Texture.changeSide=function(xocXyH,guNNjlMM)xocXyH.Options.side=guNNjlMM if xocXyH.SideDropdown then xocXyH.SideDropdown:selectOption(guNNjlMM.Name:upper())if xocXyH.SideDropdown.open then xocXyH.SideDropdown:toggle()end end end Tools.Texture.changeTexture=function(wvoHfla,UIgl)local ij={} for m,TO857 in pairs(Selection.Items)do local Uo5o=Support.GetChildrenOfClass(TO857,"Texture") for m,xX9 in pairs(Uo5o)do if xX9.Face==wvoHfla.Options.side then table.insert(ij,xX9)end end end if HttpAvailable then local pOltGg='http://www.f3xteam.com/bt/getDecalImageID/%s' local aD=HttpInterface.GetAsync(pOltGg:format(UIgl))if aD and aD:len()>0 then UIgl=aD end end
+VF.GUI.AddButton.Button.Text="ADD TEXTURE" VF.GUI.RemoveButton.Button.Text="REMOVE TEXTURE"end end Tools.Texture.changeSide=function(xocXyH,guNNjlMM)xocXyH.Options.side=guNNjlMM if xocXyH.SideDropdown then xocXyH.SideDropdown:selectOption(guNNjlMM.Name:upper())if xocXyH.SideDropdown.open then xocXyH.SideDropdown:toggle()end end end Tools.Texture.changeTexture=function(wvoHfla,UIgl)local ij={} for m,TO857 in pairs(Selection.Items)do local Uo5o=Support.GetChildrenOfClass(TO857,"Texture") for m,xX9 in pairs(Uo5o)do if xX9.Face==wvoHfla.Options.side then table.insert(ij,xX9)end end end if HttpAvailable then local pOltGg='http://www.f3xteam.com/bt/getDecalImageID/%s' local aD=HttpInterface.HttpGet(pOltGg:format(UIgl))if aD and aD:len()>0 then UIgl=aD end end
 wvoHfla:startHistoryRecord(ij) for KO,Z in pairs(ij)do Z.Texture= "http://www.roblox.com/asset/?id="..UIgl end
-wvoHfla:finishHistoryRecord()end Tools.Texture.changeDecal=function(kv6Rc,G8PtJug)local RwGMa={} for wODtgBt,R83 in pairs(Selection.Items)do local O3=Support.GetChildrenOfClass(R83,"Decal")for wODtgBt,Y in pairs(O3)do if Y.Face==kv6Rc.Options.side then table.insert(RwGMa,Y)end end end if HttpAvailable then local Nau29CQd='http://www.f3xteam.com/bt/getDecalImageID/%s' local rPWy4BIw=HttpInterface.GetAsync(Nau29CQd:format(G8PtJug)) if rPWy4BIw and rPWy4BIw:len()>0 then G8PtJug=rPWy4BIw end end
+wvoHfla:finishHistoryRecord()end Tools.Texture.changeDecal=function(kv6Rc,G8PtJug)local RwGMa={} for wODtgBt,R83 in pairs(Selection.Items)do local O3=Support.GetChildrenOfClass(R83,"Decal")for wODtgBt,Y in pairs(O3)do if Y.Face==kv6Rc.Options.side then table.insert(RwGMa,Y)end end end if HttpAvailable then local Nau29CQd='http://www.f3xteam.com/bt/getDecalImageID/%s' local rPWy4BIw=HttpInterface.HttpGet(Nau29CQd:format(G8PtJug)) if rPWy4BIw and rPWy4BIw:len()>0 then G8PtJug=rPWy4BIw end end
 kv6Rc:startHistoryRecord(RwGMa) for FIDceK,h in pairs(RwGMa)do h.Texture= "http://www.roblox.com/asset/?id="..G8PtJug end
 kv6Rc:finishHistoryRecord()end Tools.Texture.changeTransparency=function(lSW,kl)local W={} for xtH,qujnE in pairs(Selection.Items)do if lSW.Options.mode== "texture"then local fX=Support.GetChildrenOfClass(qujnE,"Texture") for xtH,Gu9cA in pairs(fX)do if Gu9cA.Face==lSW.Options.side then table.insert(W,Gu9cA)end end elseif lSW.Options.mode=="decal"then local qie86E6k=Support.GetChildrenOfClass(qujnE,"Decal") for xtH,_7XdqeK in pairs(qie86E6k)do if _7XdqeK.Face==lSW.Options.side then table.insert(W,_7XdqeK)end end end end
 lSW:startHistoryRecord(W) for FUhqkm2,OmYbhPA in pairs(W)do OmYbhPA.Transparency=kl end
@@ -6499,3 +6514,4 @@ History:add(d.State.HistoryRecord) d.State.HistoryRecord=nil end Tools.Decorate.
 Tools.Decorate.Loaded=true end}}if not _G.BTCoreEnv then _G.BTCoreEnv={}end _G.BTCoreEnv["tool"]=getfenv(0)CoreReady=true
 for Q2jN,Y1v09ha in pairs(q)do Y1v09ha[2]()end for XWU,t in pairs(q)do if not Tools[t[1]]then repeat wait()print("is tool not hooking?")until Tools[t[1]]end repeat wait()until Tools[t[1]].Loaded end if ToolType=='plugin'then local i=false ToolbarButton.Click:connect(function()if i then i=false unequipBT()else i=true
 plugin:Activate(true) equipBT(plugin:GetMouse())end end)plugin.Deactivation:connect(unequipBT)elseif ToolType== 'tool'then Tool.Equipped:connect(equipBT) Tool.Unequipped:connect(unequipBT)end
+
